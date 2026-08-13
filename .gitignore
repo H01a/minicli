@@ -1,0 +1,24 @@
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Build
+target/
+out/
+*.class
+
+# Secrets and local config
+.env
+.env.*
+!.env.example
+
+# Data and logs
+*.db
+*.sqlite
+*.sqlite3
+*.log
+logs/
+
+# OS
+.DS_Store
