@@ -35,3 +35,9 @@
 | src/main/java/com/minicli/**/package-info.java | 新建（22 个） | 依 design §3；职责见确认后的 plan | 已完成（`mvn test` 2/2 通过） |
 | README.md | 更新 | 目录结构小节同步包骨架 | 已完成 |
 | docs/04-progress.md | 更新 | 登记结构优化任务与证据 | 已完成 |
+
+### 2026-08-13 · 同步分支策略（AGENTS.md 第 7 节）
+
+| 文件 | 动作 | 生成规则摘要 | 状态 |
+| --- | --- | --- | --- |
+| AGENTS.md | 更新 | 第 7 节同步"main 唯一主分支 + 模版分支只读基线" | 已完成（人工确认后执行） |

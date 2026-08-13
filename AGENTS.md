@@ -70,6 +70,9 @@
 
 - AGENTS.md 只维护 Agent 行为和代码边界，不复制项目文档的细节。
 
+- 以 main 为唯一主分支（本地与远端一致），不使用 master，已删除的 master 不重建。
+- vibe coding 模版基线保存于 codex/vibecoding-template 分支，作为只读基线；更新模版需用户确认。
+
 **8. 学习文件夹**
 
 - `learning/` 仅用于用户与主对话（root agent）的 Vibe Coding 学习规划、进度记录与问答确认，不参与产品开发。
