@@ -5,7 +5,7 @@
 
 类似 Claude Code 的终端 Agent CLI：在终端里用自然语言驱动代码开发与调试。
 基于 ReAct 主循环、Plan-and-Execute + Multi-Agent、MCP 工具集成、三层记忆系统、
-RAG 代码库检索，技术栈为 Java 21 / JLine 4 / SQLite / JGit / CDP / Jieba / OkHttp / Ollama。
+RAG 代码库检索，技术栈为 Java 21 / JLine 4 / SQLite / JGit / CDP / Jieba / OkHttp / DeepSeek（OpenAI 兼容）。
 
 > 当前阶段：M0.1 环境与工程骨架（helloworld 可运行），详见 [docs/04-progress.md](docs/04-progress.md)。
 
@@ -13,7 +13,7 @@ RAG 代码库检索，技术栈为 Java 21 / JLine 4 / SQLite / JGit / CDP / Jie
 
 - JDK 21（已通过 Homebrew 安装并注册，`/usr/libexec/java_home -v 21` 可找到）
 - Maven 3.9+（本机 3.9.10）
-- 后续里程碑还需要：Ollama 本地服务（对话与 Embedding）
+- 后续里程碑还需要：DeepSeek API Key（或任意 OpenAI 兼容端点），配置在 .env（键名 DEEPSEEK_API_KEY / DEEPSEEK_MODEL）
 
 ## 快速开始（Maven 构建 / 测试 / 运行）
 
@@ -64,7 +64,7 @@ src/main/java/com/minicli/   # 按 docs/02-design.md §3 分层（包骨架随�
 ├── db/                     # SQLite 连接与迁移（M0.2）
 ├── ui/                     # JLine REPL（M0.2）
 ├── domain/                 # 纯 Java 领域模型（M1）
-├── llm/                    # Ollama 客户端（M1）
+├── llm/                    # LLM 客户端（M1）
 ├── agent/{core,planner,executor,reviewer}/  # ReAct + Multi-Agent（M2/M6）
 ├── tools/{spi,builtin,audit}/               # 统一工具层（M2）
 ├── mcp/{protocol,transport,registry}/       # MCP 客户端（M3/M4）

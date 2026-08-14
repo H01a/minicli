@@ -18,17 +18,18 @@
   - helloworld（`Main.greeting()`）+ 单测（含 Java 21+ 断言）；`.gitignore`、`.env.example`。
   - 验证指令与 git 指令写入 `README.md`。
   - 证据：`mvn test` 2/2 通过；`mvn package` 成功；`java -jar target/minicli-0.1.0-SNAPSHOT.jar` 输出 `Hello from minicli (Java 21.0.12)`。
-- **M0.2 基础设施（待办）**
-  - 配置加载（`config/`）与统一 Config，业务代码不散读环境变量。
-  - SQLite 连接 + 迁移执行器（schema_migrations 起步）。
-  - JLine 最小 REPL：输入命令 → 回显 → 退出。
+- **M0.2 基础设施（进行中）**
+  - 配置加载（`config/`）与统一 Config，业务代码不散读环境变量。【已完成 2026-08-14】
+  - SQLite 连接 + 迁移执行器（schema_migrations 起步）。【待办】
+  - JLine 最小 REPL：输入命令 → 回显 → 退出。【已完成 2026-08-14，直接对接 LLM 问答而非回显】
   - 验收：`mvn test` 通过；`mvn package` 后可运行 REPL。
 
-### M1 Ollama 接入
+### M1 LLM 接入（DeepSeek / OpenAI 兼容）
 
-- OkHttp 客户端：对话 API、流式输出、reasoning 透传。
+- OkHttp 客户端：DeepSeek Responses API（OpenAI 兼容）、流式输出、reasoning 透传。
 - 垂直闭环：REPL 输入 → LLM 回答 → 流式渲染。
-- 验收：本机 Ollama 可对话；无网络/服务不可用有清晰报错。
+- 进度：无状态流式一问一答已交付（2026-08-14：SSE 事件流，response.output_text.delta 增量打印，response.completed 结束）；多轮上下文待完善。
+- 验收：配置 .env（DEEPSEEK_API_KEY / DEEPSEEK_MODEL）后可对话；无网络/密钥缺失/服务不可用有清晰报错。
 
 ### M2 工具层 + ReAct 主循环
 
@@ -60,7 +61,7 @@
 
 ### M7 检索（精确 + RAG）
 
-- 精确检索基准测试（<200ms）；chunk/embeddings 表；Ollama embedding；Jieba 分词；Top-K 召回。
+- 精确检索基准测试（<200ms）；chunk/embeddings 表；Embedding 服务（DeepSeek 未提供时另行确认 OpenAI 兼容端点）；Jieba 分词；Top-K 召回。
 - 验收：基准测试记录在案；RAG 兜底返回相似片段。
 
 ### M8 JGit + CDP

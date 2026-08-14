@@ -55,7 +55,7 @@ Multi-Agent、MCP、记忆、RAG）都要在代码里真实落地，而不是只
 ### FR-04 代码库检索（精确 + RAG 兜底）
 
 - 内置精确检索：ripgrep + glob + read_file 组合，单次检索 <200ms。
-- RAG 语义检索兜底：SQLite 向量存储 + Ollama 本地 Embedding + Jieba 中文分词。
+- RAG 语义检索兜底：SQLite 向量存储 + Embedding 服务（M7 确认 OpenAI 兼容端点）+ Jieba 中文分词。
 
 验收标准：
 - 精确检索命中并返回文件/行号；性能基准测试单次 <200ms。
@@ -73,7 +73,8 @@ Multi-Agent、MCP、记忆、RAG）都要在代码里真实落地，而不是只
 
 ## 4. 非功能需求
 
-- 本地优先：LLM 与 Embedding 走本地 Ollama，默认不把代码外发。
+- LLM 走远程 API（默认 DeepSeek，OpenAI 兼容），地址/模型/密钥统一从 .env 配置加载，密钥不入库。
+- 隐私提示：代码与上下文会发送到远程模型服务，首次发送前向用户明示。
 - 可观测：工具调用、计划节点、Review 结果均有审计/日志。
 - 可配置：模型地址、并发数、重试次数、MCP server 列表等统一从配置加载，不在业务代码散读环境变量。
 - 可测试：核心逻辑（ReAct 循环、DAG 调度、记忆去重、压缩、检索）都有单元测试；外部依赖可 mock。

@@ -9,13 +9,14 @@
 | --- | --- | --- |
 | 语言 | Java 21 | 虚拟线程支撑高并发工具调用 |
 | 构建 | Maven | 本机已装 3.9.10，单模块 pom 即可 |
-| 终端 UI | JLine 4 | REPL、多行输入、流式渲染 |
+| 终端 UI | JLine 3.x（3.26.3） | REPL、多行输入、流式渲染 |
 | 数据库 | SQLite（JDBC + Flyway 或自研迁移） | 会话、消息、记忆、审计、向量 |
 | Git | JGit | 仓库内嵌 git 操作（状态、diff、提交） |
 | 浏览器 | Chrome DevTools Protocol | 网页调试工具 |
 | 分词 | Jieba（Java 版） | 中文检索关键词与 chunk 处理 |
-| HTTP/SSE | OkHttp | Ollama API、Streamable HTTP MCP |
-| LLM/Embedding | Ollama（本地） | 对话、Function Calling、Embedding |
+| HTTP/SSE | OkHttp | DeepSeek/OpenAI 兼容 API、Streamable HTTP MCP |
+| LLM | DeepSeek API（OpenAI 兼容） | 对话、Function Calling、reasoning、流式 |
+| Embedding | 待定（M7 确认 OpenAI 兼容端点） | RAG 向量化 |
 
 注意：JDK 21 已通过 Homebrew 安装并注册（`/usr/libexec/java_home` 默认解析为 21）。
 
@@ -24,7 +25,7 @@
 ```mermaid
 flowchart TD
   UI[JLine REPL] --> AGENT[Agent 编排层]
-  AGENT --> LLM[Ollama 客户端]
+  AGENT --> LLM[LLM 客户端（DeepSeek/OpenAI 兼容）]
   AGENT --> TOOLS[统一工具层 ToolRegistry]
   AGENT --> PLAN[Planner/Worker/Reviewer]
   AGENT --> MEM[记忆系统]
@@ -35,7 +36,7 @@ flowchart TD
   MCPC --> HTTP[Streamable HTTP 传输]
   MEM --> DB[(SQLite)]
   RET --> PRECISE[ripgrep + glob + read_file]
-  RET --> RAG[SQLite 向量 + Ollama Embedding + Jieba]
+  RET --> RAG[SQLite 向量 + Embedding 服务 + Jieba]
 ```
 
 依赖方向：`ui → agent → llm/tools/mcp/memory/retrieval`，全部依赖 `domain`（纯模型）；基础设施（db/config）只被上层接口引用。遵循 AGENTS.md：domain 不导入框架/SDK，API 不直接写 SQL，配置统一加载。
@@ -60,7 +61,7 @@ src/main/java/com/minicli/
 │   ├── protocol/            # JSON-RPC、生命周期状态机
 │   ├── transport/           # StdioTransport / StreamableHttpTransport
 │   └── registry/            # 动态注册为统一工具
-├── llm/                     # Ollama 客户端、Function Calling、流式、reasoning
+├── llm/                     # LLM 客户端（OpenAI 兼容：DeepSeek 等）、Function Calling、流式、reasoning
 ├── memory/
 │   ├── model/               # 4 类记忆条目
 │   ├── store/               # JSON 持久化、去重、检索
@@ -124,7 +125,7 @@ src/main/java/com/minicli/
 ### 4.7 检索（精确 + RAG）
 
 - 精确路径：`glob` 收窄候选 → `ripgrep` 关键词/正则 → `read_file` 取片段；目标是 <200ms，先测基准再优化。
-- RAG 兜底：文件切 chunk → Jieba 分词 → Ollama embedding → 向量落 SQLite；查询时同流程后取相似度 Top-K。
+- RAG 兜底：文件切 chunk → Jieba 分词 → Embedding 服务（M7 确认端点）→ 向量落 SQLite；查询时同流程后取相似度 Top-K。
 - 向量存储策略：优先 sqlite-vec 扩展；不可用时降级为 Java 内余弦相似度（chunk 数可控时可行）。
 
 ## 5. 数据库表（SQLite）
@@ -145,7 +146,7 @@ src/main/java/com/minicli/
 
 ## 6. 错误处理与可观测性
 
-- Ollama：连接失败/超时/空响应均转化为可读错误；Function Calling 输出非法时重试一次并降级提示。
+- LLM：连接失败/超时/空响应/密钥缺失均转化为可读错误；Function Calling 输出非法时重试一次并降级提示。
 - MCP：进程退出、SSE 断流、超时触发重连；审计记录失败原因。
 - 工具：异常捕获为 `ToolResult.failure`，不让异常打断 ReAct 循环。
 - 日志：分层 logger，审计落 SQLite；终端只展示用户可读信息。
