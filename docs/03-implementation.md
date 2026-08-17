@@ -32,10 +32,13 @@
 - 验收：配置 .env（DEEPSEEK_API_KEY / DEEPSEEK_MODEL）后可对话；无网络/密钥缺失/服务不可用有清晰报错。
   【验收通过 2026-08-14】
 
-### M2 工具层 + ReAct 主循环
+### M2 工具层 + ReAct 主循环（进行中 2026-08-16）
 
-- `Tool`/`ToolRegistry`/审计；首批内置工具（read_file、write_file、glob、ripgrep、run_command、list_dir、grep、git_status 等 16 个）。
-- Function Calling 驱动的 ReAct 循环；4 路并发；审计表落库。
+- `Tool`/`ToolRegistry`；首批内置工具（已实现 read_file、list_dir、glob，目标 16 个）。【切片 1 已完成 2026-08-14】
+- Function Calling 驱动的 ReAct 循环；4 路并发。【切片 2+3 已完成 2026-08-14：DeepSeekClient.askAgent + ReActAgent 串行循环；并发与 agent 模式主程序已完成 2026-08-16：虚拟线程 + Semaphore(4)，Main/Repl 接入 ReActAgent】
+- 审计：按用户 2026-08-16 决定暂缓（AuditStore 接口方案保留，SQLite 就绪后实现）。
+- thinking 模式：reasoning 按官方格式回传（并行调用每个 function_call 前一份），真实 API 400 已修复（2026-08-17）。
+- 剩余：REPL 过程展示（reasoning/工具链路/流式渲染）；补齐 16 个工具（get_cwd、`~` 展开等路径能力增强）。
 - 验收：自然语言任务可触发多工具调用并最终回答；审计可查。
 
 ### M3 MCP stdio 集成
