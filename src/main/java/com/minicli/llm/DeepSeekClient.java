@@ -38,8 +38,8 @@ public final class DeepSeekClient {
 
     public DeepSeekClient(Config config) {
         this(config, new OkHttpClient.Builder()
-                .connectTimeout(Duration.ofSeconds(10))
-                .readTimeout(Duration.ofSeconds(120))
+                .connectTimeout(Duration.ofSeconds(config.connectTimeoutSeconds()))
+                .readTimeout(Duration.ofSeconds(config.readTimeoutSeconds()))
                 .build());
     }
 

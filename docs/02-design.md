@@ -96,7 +96,7 @@ src/main/java/com/minicli/
 
 具体形态（2026-08-14 切片 2+3 落地）：
 
-- `ReActAgent`（agent/core/）：维护 input items 列表（message + function_call + function_call_output），循环调用 `DeepSeekClient.askAgent`，直到 `functionCalls` 为空或达到 max-steps（默认 8）。
+- `ReActAgent`（agent/core/）：维护 input items 列表（message + function_call + function_call_output），循环调用 `DeepSeekClient.askAgent`，直到 `functionCalls` 为空或达到 max-steps（默认 50，可由 MINICLI_AGENT_MAX_STEPS 配置）。
 - `DeepSeekClient.askAgent(inputItems, toolSpecs)`：请求体带 `input`（数组）、`tools`（注册表说明书）、`tool_choice:"auto"`；从 `response.completed` 的 response.output 提取 function_call 项（call_id/name/arguments）。
 - 工具结果回填前截断（默认 4000 字符）防上下文撑爆；未注册工具/参数解析失败也回填 FAILURE，不让异常中断循环。
 - 输出模型：`FunctionCall(callId, name, argumentsJson)`、`LlmTurnResult(outputText, reasoningText, functionCalls)`。
@@ -144,6 +144,21 @@ src/main/java/com/minicli/
 - 精确路径：`glob` 收窄候选 → `ripgrep` 关键词/正则 → `read_file` 取片段；目标是 <200ms，先测基准再优化。
 - RAG 兜底：文件切 chunk → Jieba 分词 → Embedding 服务（M7 确认端点）→ 向量落 SQLite；查询时同流程后取相似度 Top-K。
 - 向量存储策略：优先 sqlite-vec 扩展；不可用时降级为 Java 内余弦相似度（chunk 数可控时可行）。
+
+### 4.8 配置项（外部化）
+
+所有可外部化配置统一放项目根目录 `.env`，由 `config/Config.java` 唯一加载（AGENTS.md 第 5 条）；取值优先级：.env > 同名系统环境变量 > 代码内默认值。`.env.example` 仅是 @root 个人使用的模板配置文件，不作为运行配置依据；真正生效的是 `.env`（gitignore 排除，不入库）。
+
+| 分类 | 键 | 默认值 | 说明 |
+| --- | --- | --- | --- |
+| LLM | DEEPSEEK_API_KEY | 无（必填） | DeepSeek API 密钥，只放 .env |
+| LLM | DEEPSEEK_MODEL | 无（必填） | 模型名，如 deepseek-v4-flash |
+| LLM | DEEPSEEK_BASE_URL | https://api.deepseek.com | OpenAI 兼容 API 基础地址 |
+| 网络 | DEEPSEEK_CONNECT_TIMEOUT_SECONDS | 10 | 与 API 建立连接的超时（秒） |
+| 网络 | DEEPSEEK_READ_TIMEOUT_SECONDS | 120 | 流式响应读取超时（秒） |
+| Agent | MINICLI_AGENT_MAX_STEPS | 50 | ReAct 最大循环步数 |
+| Agent | MINICLI_AGENT_MAX_CONCURRENCY | 4 | 同一轮工具调用最大并发数 |
+| Agent | MINICLI_AGENT_MAX_OBSERVATION_CHARS | 4000 | 工具观察结果回填前的截断字符数 |
 
 ## 5. 数据库表（SQLite）
 

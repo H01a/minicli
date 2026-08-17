@@ -171,6 +171,23 @@ class ReActAgentTest {
         assertTrue(second.getBody().readUtf8().contains("\"output\":\"done\""));
     }
 
+    @Test
+    void truncatesObservationWithConfiguredLimit() throws Exception {
+        ReActAgent tiny = new ReActAgent(
+                new DeepSeekClient(Config.of("test-key", "deepseek-v4-flash", server.url("/").toString())),
+                registry, 10, 4, 5);
+        server.enqueue(ok(sseFunctionCall("call_1", "echo", new JSONObject().put("text", "hello"))));
+        server.enqueue(ok(sseText("最终回答")));
+
+        tiny.run("截断");
+
+        server.takeRequest();
+        RecordedRequest second = server.takeRequest();
+        String body = second.getBody().readUtf8();
+        assertTrue(body.contains("echo:"), "观察结果应按配置长度截断");
+        assertTrue(body.contains("已截断"));
+    }
+
     private static Tool barrierTool(String name, CountDownLatch arrived) {
         return new Tool() {
             @Override public String name() { return name; }

@@ -13,7 +13,7 @@ RAG 代码库检索，技术栈为 Java 21 / JLine 3.x / SQLite / JGit / CDP / J
 
 - JDK 21（已通过 Homebrew 安装并注册，`/usr/libexec/java_home -v 21` 可找到）
 - Maven 3.9+（本机 3.9.10）
-- 后续里程碑还需要：DeepSeek API Key（或任意 OpenAI 兼容端点），配置在 .env（键名 DEEPSEEK_API_KEY / DEEPSEEK_MODEL）
+- 后续里程碑还需要：DeepSeek API Key（或任意 OpenAI 兼容端点），配置在项目根目录 .env（键名 DEEPSEEK_API_KEY / DEEPSEEK_MODEL；完整键位与中文注释见 .env.example。.env.example 仅为个人使用模板，真正生效的是 .env）
 
 ## 快速开始（Maven 构建 / 测试 / 运行）
 

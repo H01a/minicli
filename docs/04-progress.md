@@ -34,7 +34,7 @@
   - 遗留：M2 切片 2（LLM Function Calling）与后续切片。
 - 2026-08-14 任务 7（M2 切片 2+3：Function Calling + ReAct 主循环）：
   - llm：新增 FunctionCall / LlmTurnResult 模型；DeepSeekClient.askAgent 支持 input items 列表 + tools 说明书 + tool_choice:auto，从 response.completed 提取 function_call（SSE 解析重构为 SseAccumulator，askStream 兼容）。
-  - agent/core：ReActAgent 串行主循环——维护完整 input items 历史、执行工具并回填、未注册工具/参数解析失败转 FAILURE、结果截断 4000 字符、max-steps 默认 8。
+  - agent/core：ReActAgent 串行主循环——维护完整 input items 历史、执行工具并回填、未注册工具/参数解析失败转 FAILURE、结果截断 4000 字符、max-steps 默认 50（任务 11 起可配置）。
   - 证据：`mvn test` 26/26 通过（新增 ReActAgentTest 4 个 + DeepSeekClientTest 2 个）。
   - 遗留：M2 切片 4（4 路并发 + 审计落库）、切片 5（REPL 展示 reasoning/工具链路、补齐 16 个工具）；tools 字段名（parameters）待真实 API 冒烟确认。
 - 2026-08-16 任务 8（M2 并发执行 + agent 模式主程序）：
@@ -52,6 +52,11 @@
   - 统一打点（stderr，[agent]/[tool]/[llm] 前缀）：每轮 step 与 input items 数、工具调用名列表、工具执行结果（状态/长度）、最终回答长度、请求失败摘要。
   - reasoningItem 确认保持官方格式（type=reasoning + reasoning_text 内容块列表）。
   - 证据：`mvn test` 29/29 通过；打点走 stderr 不影响断言。
+- 2026-08-17 任务 11（配置外部化重构）：
+  - 梳理可外部化配置并分三类写入 .env：LLM（DEEPSEEK_API_KEY / DEEPSEEK_MODEL / DEEPSEEK_BASE_URL）、网络超时（DEEPSEEK_CONNECT_TIMEOUT_SECONDS / DEEPSEEK_READ_TIMEOUT_SECONDS）、Agent 主循环（MINICLI_AGENT_MAX_STEPS / MINICLI_AGENT_MAX_CONCURRENCY / MINICLI_AGENT_MAX_OBSERVATION_CHARS），每条含中文注释；.env.example 同步为模板。
+  - Config 统一加载：.env > 同名环境变量 > 默认值，正整数非法值报错；DeepSeekClient 超时、ReActAgent 的 maxSteps/并发数/观察截断均改为读 Config；Main 装配透传。
+  - 文档：AGENTS.md §0 与 docs/02-design.md §4.8 登记".env.example 仅个人模板、.env 为真实配置"说明；max-steps 默认值统一为 50。
+  - 证据：`mvn test` 34/34 通过（新增 Config 3 个 + ReActAgent 1 个用例）；`.env` 原密钥值保留未变。
 
 ## 进行中
 

@@ -27,21 +27,33 @@ import java.util.concurrent.Semaphore;
 public final class ReActAgent {
 
     public static final int DEFAULT_MAX_STEPS = 50;
-    public static final int MAX_OBSERVATION_CHARS = 4000;
-    public static final int MAX_CONCURRENCY = 4;
+    public static final int DEFAULT_MAX_CONCURRENCY = 4;
+    public static final int DEFAULT_MAX_OBSERVATION_CHARS = 4000;
 
     private final DeepSeekClient llm;
     private final ToolRegistry tools;
     private final int maxSteps;
+    private final int maxConcurrency;
+    private final int maxObservationChars;
 
     public ReActAgent(DeepSeekClient llm, ToolRegistry tools) {
         this(llm, tools, DEFAULT_MAX_STEPS);
     }
 
     public ReActAgent(DeepSeekClient llm, ToolRegistry tools, int maxSteps) {
+        this(llm, tools, maxSteps, DEFAULT_MAX_CONCURRENCY, DEFAULT_MAX_OBSERVATION_CHARS);
+    }
+
+    public ReActAgent(DeepSeekClient llm, ToolRegistry tools, int maxSteps,
+                      int maxConcurrency, int maxObservationChars) {
+        if (maxSteps <= 0 || maxConcurrency <= 0 || maxObservationChars <= 0) {
+            throw new IllegalArgumentException("maxSteps / maxConcurrency / maxObservationChars 必须为正整数");
+        }
         this.llm = llm;
         this.tools = tools;
         this.maxSteps = maxSteps;
+        this.maxConcurrency = maxConcurrency;
+        this.maxObservationChars = maxObservationChars;
     }
 
     /** 运行一次 ReAct 循环，返回最终回答文本。 */
@@ -80,7 +92,7 @@ public final class ReActAgent {
         if (calls.isEmpty()) {
             return;
         }
-        Semaphore gate = new Semaphore(MAX_CONCURRENCY);
+        Semaphore gate = new Semaphore(maxConcurrency);
         try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
             List<Callable<String>> tasks = calls.stream()
                     .map(call -> (Callable<String>) () -> runWithPermit(gate, call))
@@ -179,12 +191,12 @@ public final class ReActAgent {
                 .put("output", output);
     }
 
-    private static String abbreviate(String s) {
+    private String abbreviate(String s) {
         if (s == null) {
             return "";
         }
-        return s.length() <= MAX_OBSERVATION_CHARS
+        return s.length() <= maxObservationChars
                 ? s
-                : s.substring(0, MAX_OBSERVATION_CHARS) + "\n…(已截断)";
+                : s.substring(0, maxObservationChars) + "\n…(已截断)";
     }
 }

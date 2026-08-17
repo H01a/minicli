@@ -7,6 +7,7 @@
 **0. 接手项目导航（必读）**
 
 - 项目是什么：minicli 是终端 Agent CLI 练手项目——在终端用自然语言驱动代码开发与调试；技术栈 Java 21 / Maven / JLine 3.x / SQLite / OkHttp / DeepSeek API。产品目标与验收见 docs/01-prd.md。
+- 配置文件说明：`.env.example` 仅是 @root 个人使用的模板配置文件，不作为运行配置依据；真正生效的配置文件是项目根目录 `.env`（已被 .gitignore 排除、不入库）。完整配置键位与说明见 .env.example 与 docs/02-design.md §4.8。
 
 - 文档地图（权威文档结构与读取时机）：
 

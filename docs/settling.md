@@ -228,6 +228,24 @@
 | src/main/java/com/minicli/llm/DeepSeekClient.java | 更新 | 请求失败打印收敛为 [llm] 摘要打点（不打印完整请求体） | 已完成（人工确认后执行；`mvn test` 29/29） |
 | docs/04-progress.md | 更新 | 记录 review 修复与打点 | 已完成（人工确认后执行） |
 
+### 2026-08-17 · 配置外部化重构（.env 分类整理 + 加载链路重构）
+
+| 文件 | 动作 | 生成规则摘要 | 状态 |
+| --- | --- | --- | --- |
+| docs/settling.md | 更新 | 登记本轮清单 | 已完成（人工确认后执行） |
+| AGENTS.md | 更新 | §0 增加配置文件说明（.env.example 仅个人模板；.env 为真实配置） | 已完成（人工确认后执行） |
+| docs/02-design.md | 更新 | §4.2 修正 max-steps 默认值；新增 §4.8 配置项表 | 已完成（人工确认后执行） |
+| .env.example | 更新 | 重写为带详细中文注释的配置模板（LLM/网络/Agent 三类） | 已完成（人工确认后执行） |
+| .env | 更新 | 按分类重排并补注释；保留现有 DEEPSEEK_API_KEY / DEEPSEEK_MODEL 值 | 已完成（人工确认后执行；原值比对一致） |
+| src/main/java/com/minicli/config/Config.java | 更新 | 新增 6 个可配置项与校验（.env > 环境变量 > 默认值） | 已完成（人工确认后执行；`mvn test` 34/34） |
+| src/main/java/com/minicli/llm/DeepSeekClient.java | 更新 | OkHttp 超时改读 Config | 已完成（人工确认后执行；`mvn test` 34/34） |
+| src/main/java/com/minicli/agent/core/ReActAgent.java | 更新 | maxSteps/maxConcurrency/maxObservationChars 实例化可配置 | 已完成（人工确认后执行；`mvn test` 34/34） |
+| src/main/java/com/minicli/Main.java | 更新 | 装配时从 Config 传入 Agent 参数 | 已完成（人工确认后执行；`mvn test` 34/34） |
+| src/test/java/com/minicli/config/ConfigTest.java | 更新 | 新增默认值/自定义值/非法值测试 | 已完成（`mvn test` 34/34） |
+| src/test/java/com/minicli/agent/core/ReActAgentTest.java | 更新 | 新增观察截断配置测试 | 已完成（`mvn test` 34/34） |
+| README.md | 更新 | 环境要求说明 .env 为真实配置 | 已完成（人工确认后执行） |
+| docs/04-progress.md | 更新 | 记录任务 11 与测试证据；修正 max-steps 默认值 | 已完成（人工确认后执行） |
+
 ## 4. 常驻主动更新规则
 
 - 适用文件：`learning/concepts.md`（概念问答学习记录）。

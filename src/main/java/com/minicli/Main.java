@@ -20,12 +20,15 @@ public final class Main {
 
     public static void main(String[] args) {
         try {
+            // 到.env加载配置，包括key, model_name, url
             Config config = Config.load();
+            // 将工具注册到Map<String, Tool>注册表中
             ToolRegistry registry = new ToolRegistry();
             registry.register(new ReadFileTool());
             registry.register(new ListDirTool());
             registry.register(new GlobTool());
-            ReActAgent agent = new ReActAgent(new DeepSeekClient(config), registry);
+            ReActAgent agent = new ReActAgent(new DeepSeekClient(config), registry,
+                    config.maxSteps(), config.maxConcurrency(), config.maxObservationChars());
             new Repl(agent).start();
         } catch (ConfigException e) {
             System.err.println("配置错误: " + e.getMessage());
