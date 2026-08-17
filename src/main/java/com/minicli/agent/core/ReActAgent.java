@@ -3,6 +3,7 @@ package com.minicli.agent.core;
 import com.minicli.llm.DeepSeekClient;
 import com.minicli.llm.FunctionCall;
 import com.minicli.llm.LlmTurnResult;
+import com.minicli.llm.StreamHandler;
 import com.minicli.tools.spi.Tool;
 import com.minicli.tools.spi.ToolRegistry;
 import com.minicli.tools.spi.ToolResult;
@@ -56,21 +57,43 @@ public final class ReActAgent {
         this.maxObservationChars = maxObservationChars;
     }
 
-    /** 运行一次 ReAct 循环，返回最终回答文本。 */
+    /** 运行一次 ReAct 循环（无过程监听），返回最终回答文本。 */
     public String run(String userInput) {
+        return run(userInput, new AgentListener() {
+        });
+    }
+
+    /** 运行一次 ReAct 循环，过程事件实时转发给 listener，返回最终回答文本。 */
+    public String run(String userInput, AgentListener listener) {
         List<JSONObject> inputItems = new ArrayList<>();
         inputItems.add(messageItem("user", userInput));
         for (int step = 1; step <= maxSteps; step++) {
+            listener.onStep(step, maxSteps);
             System.err.println("[agent] step=" + step + "/" + maxSteps
                     + " 请求 LLM（input items=" + inputItems.size() + "）");
-            LlmTurnResult turn = llm.askAgent(inputItems, toolSpecs());
+            LlmTurnResult turn = llm.askAgent(inputItems, toolSpecs(), new StreamHandler() {
+                @Override
+                public void onOutputDelta(String delta) {
+                    listener.onOutputDelta(delta);
+                }
+
+                @Override
+                public void onReasoningDelta(String delta) {
+                    listener.onReasoningDelta(delta);
+                }
+
+                @Override
+                public void onDone() {
+                }
+            });
             if (turn.finished()) {
                 System.err.println("[agent] 收到最终回答（" + turn.outputText().length() + " 字）");
+                listener.onDone();
                 return turn.outputText();
             }
             System.err.println("[agent] 收到工具调用: "
                     + turn.functionCalls().stream().map(FunctionCall::name).toList());
-            appendObservations(inputItems, turn.functionCalls(), turn.reasoningText());
+            appendObservations(inputItems, turn.functionCalls(), turn.reasoningText(), listener);
         }
         throw new AgentException("ReAct 循环超过最大步数 " + maxSteps + "，未得到最终回答");
     }
@@ -88,22 +111,29 @@ public final class ReActAgent {
      * 注意：Responses API 校验要求每个 function_call 前必须有紧邻的 reasoning item
      * （并行 N 个调用需 N 份 reasoning，同一份思维链文本即可）。
      */
-    private void appendObservations(List<JSONObject> inputItems, List<FunctionCall> calls, String reasoningText) {
+    private void appendObservations(List<JSONObject> inputItems, List<FunctionCall> calls,
+                                    String reasoningText, AgentListener listener) {
         if (calls.isEmpty()) {
             return;
         }
+        for (FunctionCall call : calls) {
+            listener.onToolCallStarted(call);
+        }
         Semaphore gate = new Semaphore(maxConcurrency);
         try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
-            List<Callable<String>> tasks = calls.stream()
-                    .map(call -> (Callable<String>) () -> runWithPermit(gate, call))
+            List<Callable<ToolOutcome>> tasks = calls.stream()
+                    .map(call -> (Callable<ToolOutcome>) () -> runWithPermit(gate, call))
                     .toList();
-            List<Future<String>> futures = executor.invokeAll(tasks);
+            List<Future<ToolOutcome>> futures = executor.invokeAll(tasks);
             for (int i = 0; i < calls.size(); i++) {
                 if (reasoningText != null && !reasoningText.isBlank()) {
                     inputItems.add(reasoningItem(reasoningText));
                 }
-                inputItems.add(functionCallItem(calls.get(i)));
-                inputItems.add(functionCallOutputItem(calls.get(i).callId(), futures.get(i).get()));
+                FunctionCall call = calls.get(i);
+                ToolOutcome outcome = futures.get(i).get();
+                listener.onToolResult(call, outcome.result(), outcome.durationMillis());
+                inputItems.add(functionCallItem(call));
+                inputItems.add(functionCallOutputItem(call.callId(), resultText(outcome.result())));
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -114,44 +144,48 @@ public final class ReActAgent {
         }
     }
 
-    private String runWithPermit(Semaphore gate, FunctionCall call) {
+    private ToolOutcome runWithPermit(Semaphore gate, FunctionCall call) {
         try {
             gate.acquire();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            return ToolResult.failure("并发等待被中断: " + e.getMessage()).error();
+            return new ToolOutcome(ToolResult.failure("并发等待被中断: " + e.getMessage()), 0);
         }
+        long start = System.nanoTime();
         try {
-            return execute(call);
+            return new ToolOutcome(execute(call), (System.nanoTime() - start) / 1_000_000);
         } finally {
             gate.release();
         }
     }
 
-    /** 执行单个工具调用并生成回填文本；任何失败都转成 FAILURE 文本，不中断循环。 */
-    private String execute(FunctionCall call) {
+    /** 执行单个工具调用；任何失败都转成 FAILURE，不中断循环。返回完整结果（回填时再截断）。 */
+    private ToolResult execute(FunctionCall call) {
         Optional<Tool> tool = tools.find(call.name());
         if (tool.isEmpty()) {
-            String err = ToolResult.failure("未注册的工具: " + call.name()).error();
+            ToolResult failure = ToolResult.failure("未注册的工具: " + call.name());
             System.err.println("[tool] " + call.name() + " => FAILURE（未注册）");
-            return err;
+            return failure;
         }
         try {
             ToolResult result = tool.get().invoke(new JSONObject(call.argumentsJson()));
             String text = result.isSuccess() ? result.output() : result.error();
-            String summary = abbreviate(text);
             System.err.println("[tool] " + call.name() + " args=" + abbreviateArgs(call.argumentsJson())
-                    + " => " + result.status() + "（原输出 " + text.length() + " 字，回填 " + summary.length() + " 字）");
-            return summary;
+                    + " => " + result.status() + "（原输出 " + text.length() + " 字，回填 "
+                    + abbreviate(text).length() + " 字）");
+            return result;
         } catch (JSONException e) {
-            String err = abbreviate(ToolResult.failure("参数解析失败: " + e.getMessage()).error());
             System.err.println("[tool] " + call.name() + " => FAILURE（参数解析失败）");
-            return err;
+            return ToolResult.failure("参数解析失败: " + e.getMessage());
         } catch (RuntimeException e) {
-            String err = abbreviate(ToolResult.failure("工具执行异常: " + e.getMessage()).error());
             System.err.println("[tool] " + call.name() + " => FAILURE（执行异常: " + e.getMessage() + "）");
-            return err;
+            return ToolResult.failure("工具执行异常: " + e.getMessage());
         }
+    }
+
+    /** 回填给 LLM 的观察文本：截断到配置长度。 */
+    private String resultText(ToolResult result) {
+        return abbreviate(result.isSuccess() ? result.output() : result.error());
     }
 
     /** 打点用：参数 JSON 截断到 120 字符。 */
@@ -198,5 +232,9 @@ public final class ReActAgent {
         return s.length() <= maxObservationChars
                 ? s
                 : s.substring(0, maxObservationChars) + "\n…(已截断)";
+    }
+
+    /** 工具执行结果 + 耗时（毫秒）。 */
+    private record ToolOutcome(ToolResult result, long durationMillis) {
     }
 }

@@ -7,7 +7,7 @@
 基于 ReAct 主循环、Plan-and-Execute + Multi-Agent、MCP 工具集成、三层记忆系统、
 RAG 代码库检索，技术栈为 Java 21 / JLine 3.x / SQLite / JGit / CDP / Jieba / OkHttp / DeepSeek（OpenAI 兼容）。
 
-> 当前阶段：M1 已完成；M2 进行中（统一工具抽象、Function Calling + ReAct 主循环、并发执行已完成；审计暂缓；REPL 过程展示待做），详见 [docs/04-progress.md](docs/04-progress.md)。
+> 当前阶段：M1 已完成；M2 除审计外已完成（工具层、Function Calling + ReAct、并发执行、配置外部化、REPL 过程展示、16 个内置工具）；审计与 SQLite 暂缓；下一里程碑 M3 MCP stdio，详见 [docs/04-progress.md](docs/04-progress.md)。
 
 ## 环境要求
 

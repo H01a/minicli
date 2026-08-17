@@ -1,7 +1,7 @@
 # minicli 技术设计（怎么设计）
 
 - 状态：草稿 v0.1
-- 更新时间：2026-08-13
+- 更新时间：2026-08-17
 
 ## 1. 技术栈
 
@@ -101,6 +101,7 @@ src/main/java/com/minicli/
 - 工具结果回填前截断（默认 4000 字符）防上下文撑爆；未注册工具/参数解析失败也回填 FAILURE，不让异常中断循环。
 - 输出模型：`FunctionCall(callId, name, argumentsJson)`、`LlmTurnResult(outputText, reasoningText, functionCalls)`。
 - thinking 模式（2026-08-16 修复）：DeepSeek 要求继续循环时必须把上一轮的 reasoning 以 `{"type":"reasoning","content":[{"type":"reasoning_text","text":"..."}]}` 回传（官方 create-response 接口定义：reasoning item 的 content 为 reasoning_text 内容块列表），否则 HTTP 400。`ReActAgent` 在每轮继续前回填该 item。
+- 过程展示（2026-08-17 设计，切片 5 + 输出优化）：`AgentListener`（agent/core/）提供 `onStep` / `onReasoningDelta` / `onToolCallStarted` / `onToolResult(call, result, durationMillis)` / `onOutputDelta` / `onDone` 事件；`ReActAgent.run(input, listener)` 在流式回调与工具执行点转发事件（工具耗时由 ReActAgent 实测，`onToolCallStarted` 在真正执行前触发）；`ui/AgentDisplay` 把事件渲染为终端过程块：思考块（🧠 thinking · thought xx ms + reasoning 原文）、工具块（🔧 invoke xxx · running xx ms + 结构化 args/output）、流式最终回答（👽>）。核心循环不依赖 UI。
 
 ### 4.3 工具抽象与并发
 
@@ -115,7 +116,28 @@ src/main/java/com/minicli/
 - `Tool`（tools/spi/）：`name()` 唯一名、`description()` 用途说明、`inputSchema()` 入参 JSON Schema（org.json）、`invoke(JSONObject) -> ToolResult`。
 - `ToolResult`（tools/spi/）：`status(SUCCESS/FAILURE)`、`output`、`error`；实现必须把异常转成 FAILURE，不得抛给上层。
 - `ToolRegistry`（tools/spi/）：`register`（空名/重名拒绝）、`find`/`require`、`all`（注册顺序）、`size`。
-- 首批内置工具（tools/builtin/，只读先行）：`read_file`、`list_dir`、`glob`；后续按 M2 补齐 16 个工具清单。
+- 内置工具清单（16 个，M2 切片 5 补齐）：路径参数统一支持 `~` 展开与相对当前目录解析（`PathUtil.resolve`）；写类工具拒绝 `.env*` 与 `.git` 路径；`run_command` 默认超时 30s、输出截断 8000 字符。
+
+  | 工具 | 职责 | 安全约束 |
+  | --- | --- | --- |
+  | read_file | 读取文件全文 | 只读 |
+  | list_dir | 列出目录条目 | 只读 |
+  | glob | glob 模式匹配文件 | 只读 |
+  | get_cwd | 当前工作目录 | 只读 |
+  | path_info | 路径存在/类型/大小/修改时间/绝对路径 | 只读 |
+  | tree | 目录树（maxDepth） | 只读，跳过 .git |
+  | search_text | 文本/正则搜索文件内容（文件:行号:内容） | 只读，跳过 .git/target/node_modules/.idea |
+  | read_file_range | 按行范围读取大文件 | 只读 |
+  | write_file | 写文件（可自动建目录） | 拒绝 .env* 与 .git 路径 |
+  | edit_file | 精确 old→new 替换并返回摘要 | 拒绝 .env* 与 .git 路径 |
+  | run_command | 执行 shell 命令（cwd/超时可配） | 默认超时 30s，输出截断 8000 |
+  | get_env | 读取环境变量 | 只读 |
+  | system_info | OS/JDK/用户/时区/处理器 | 只读 |
+  | git_status | git status --short | 只读，超时 15s |
+  | git_diff | git diff / --stat | 只读，超时 15s |
+  | which | 在 PATH 中查找可执行文件 | 只读 |
+
+落地状态（2026-08-17）：16 个工具全部补齐并注册进 `Main`；`PathUtil` 与 `CommandRunner` 为公共辅助。
 
 ### 4.4 Plan-and-Execute + Multi-Agent
 

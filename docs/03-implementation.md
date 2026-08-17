@@ -1,7 +1,7 @@
 # minicli 实施计划（怎么推进）
 
 - 状态：草稿 v0.1
-- 更新时间：2026-08-13
+- 更新时间：2026-08-17
 
 ## 1. 实施原则
 
@@ -32,14 +32,14 @@
 - 验收：配置 .env（DEEPSEEK_API_KEY / DEEPSEEK_MODEL）后可对话；无网络/密钥缺失/服务不可用有清晰报错。
   【验收通过 2026-08-14】
 
-### M2 工具层 + ReAct 主循环（进行中 2026-08-16）
+### M2 工具层 + ReAct 主循环（进行中 2026-08-17）
 
 - `Tool`/`ToolRegistry`；首批内置工具（已实现 read_file、list_dir、glob，目标 16 个）。【切片 1 已完成 2026-08-14】
 - Function Calling 驱动的 ReAct 循环；4 路并发。【切片 2+3 已完成 2026-08-14：DeepSeekClient.askAgent + ReActAgent 串行循环；并发与 agent 模式主程序已完成 2026-08-16：虚拟线程 + Semaphore(4)，Main/Repl 接入 ReActAgent】
 - 审计：按用户 2026-08-16 决定暂缓（AuditStore 接口方案保留，SQLite 就绪后实现）。
 - thinking 模式：reasoning 按官方格式回传（并行调用每个 function_call 前一份），真实 API 400 已修复（2026-08-17）。
-- 剩余：REPL 过程展示（reasoning/工具链路/流式渲染）；补齐 16 个工具（get_cwd、`~` 展开等路径能力增强）。
-- 验收：自然语言任务可触发多工具调用并最终回答；审计可查。
+- 切片 5（已完成 2026-08-17）：REPL 过程展示（AgentListener + AgentDisplay，见 design §4.2）；16 个内置工具补齐（清单见 design §4.3；路径统一支持 `~` 展开；写类工具拒绝 .env* 与 .git；`mvn test` 73/73）。
+- 验收：自然语言任务可触发多工具调用并最终回答；审计可查。【审计可查部分暂缓，SQLite 就绪后实现】
 
 ### M3 MCP stdio 集成
 

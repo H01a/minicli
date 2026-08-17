@@ -1,10 +1,10 @@
 # minicli 进度（现在做到哪里）
 
-- 更新时间：2026-08-16
+- 更新时间：2026-08-17
 
 ## 当前阶段
 
-**M1 已完成；M2 进行中（切片 1 统一工具抽象、切片 2+3 Function Calling + ReAct 主循环、并发执行与 agent 模式主程序已完成；审计暂缓；REPL 过程展示待做）；M0.2 SQLite 迁移执行器按用户 2026-08-14 决定暂时搁置。**
+**M1 已完成；M2 除审计外已完成（切片 1-5：统一工具抽象、Function Calling + ReAct 主循环、并发执行、agent 模式主程序、配置外部化、REPL 过程展示、16 个内置工具）；审计按用户 2026-08-16 决定暂缓（AuditStore 接口方案保留，SQLite 就绪后实现）；M0.2 SQLite 迁移执行器按用户 2026-08-14 决定暂时搁置。**
 
 ## 已完成
 
@@ -57,6 +57,15 @@
   - Config 统一加载：.env > 同名环境变量 > 默认值，正整数非法值报错；DeepSeekClient 超时、ReActAgent 的 maxSteps/并发数/观察截断均改为读 Config；Main 装配透传。
   - 文档：AGENTS.md §0 与 docs/02-design.md §4.8 登记".env.example 仅个人模板、.env 为真实配置"说明；max-steps 默认值统一为 50。
   - 证据：`mvn test` 34/34 通过（新增 Config 3 个 + ReActAgent 1 个用例）；`.env` 原密钥值保留未变。
+- 2026-08-17 任务 12（M2 切片 5：REPL 过程展示 + 16 内置工具补齐 + 文档补全）：
+  - AgentListener（agent/core）过程事件接口；ReActAgent.run(input, listener) 在流式回调与工具执行点转发事件；ui/AgentDisplay 渲染思维链/工具链路/流式最终回答；Repl 接入。
+  - 内置工具补齐到 16 个：新增 get_cwd/path_info/tree/search_text/read_file_range/write_file/edit_file/run_command/get_env/system_info/git_status/git_diff/which；PathUtil（~ 展开 + 敏感写路径判定）与 CommandRunner（超时/截断）；Main 注册全部工具。
+  - 文档补全：progress 更新时间与历史记录；design §4.2/§4.3；implementation M2 状态；README 当前阶段。
+  - 证据：`mvn test` 73/73 通过（新增 39 个用例）；`mvn package` 成功；真实 API 过程展示待用户验证。
+- 2026-08-17 任务 13（输出优化：过程展示标题/耗时/结构化参数与结果）：
+  - AgentListener.onToolResult 增加 durationMillis；ReActAgent 在 runWithPermit 测量工具实际耗时，并把 onToolCallStarted 提前到执行前触发。
+  - AgentDisplay 重写：思考块标题（🧠 thinking · thought xx ms）+ reasoning 原文；工具块标题（🔧 invoke xxx · running xx ms）+ 结构化 args/output（JSON 自动格式化）；最终回答保持流式。
+  - 证据：`mvn test` 73/73 通过；`mvn package` 成功；真实终端渲染待用户冒烟。
 
 ## 进行中
 
@@ -64,8 +73,8 @@
 
 ## 下一任务
 
-**M2 切片 5：REPL 过程展示（reasoning/工具调用链路 + 流式最终回答）+ 补齐 16 个内置工具；审计按用户 2026-08-16 决定暂缓（AuditStore 接口方案保留，SQLite 就绪后实现）。**
-（M0.2 SQLite 迁移执行器仍按用户 2026-08-14 决定暂时搁置，未来需要时再推进。）
+**M3 MCP stdio 集成：JSON-RPC 协议层 + 生命周期状态机 + stdio 传输；tools/list 动态注册、tools/call 调用；验收：连接一个 stdio MCP server（可自写最小 echo server）完成一次工具调用。**
+（审计与 M0.2 SQLite 迁移执行器保持按用户决定暂缓：审计在 SQLite 就绪后实现；真实 API 的 REPL 过程展示冒烟待用户验证。）
 
 ## 阻塞与注意事项
 
@@ -87,3 +96,8 @@
 | 2026-08-14 | M2 切片 1 统一工具抽象 | Tool/ToolResult/ToolRegistry + read_file/list_dir/glob 及单测（`mvn test` 20/20） | M2 切片 2 Function Calling |
 | 2026-08-14 | M2 切片 2+3 Function Calling + ReAct 主循环 | askAgent（tools 参数 + function_call 解析）+ ReActAgent 串行循环（`mvn test` 26/26） | 切片 4 并发+审计；切片 5 REPL |
 | 2026-08-16 | M2 并发执行 + agent 模式主程序 | ReActAgent 并发（虚拟线程+Semaphore(4)），Main/Repl 接入 ReActAgent（`mvn test` 28/28，`mvn package` 成功） | 审计暂缓；切片 5 REPL 过程展示 |
+| 2026-08-16 | 任务 9 thinking reasoning 回传 | 官方格式回填 reasoning item，真实 API 400 修复（`mvn test` 29/29） | 真实 REPL 待用户验证 |
+| 2026-08-17 | 任务 10 Review 修复 + 调试打点 | 收敛调试打印，统一 [agent]/[tool]/[llm] 打点（`mvn test` 29/29） | 无 |
+| 2026-08-17 | 任务 11 配置外部化重构 | .env 分类 + Config 统一加载 + 链路重构（`mvn test` 34/34） | 无 |
+| 2026-08-17 | 任务 12 M2 切片 5 过程展示 + 16 工具 | AgentListener/AgentDisplay + 13 个新工具（`mvn test` 73/73，`mvn package` 成功） | 审计暂缓；真实 API 过程展示待验证 |
+| 2026-08-17 | 任务 13 输出优化 | 过程展示标题含耗时、结构化参数/结果（`mvn test` 73/73） | 真实终端渲染待验证 |

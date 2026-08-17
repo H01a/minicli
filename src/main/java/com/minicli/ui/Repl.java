@@ -10,7 +10,7 @@ import org.jline.terminal.TerminalBuilder;
 
 import java.io.IOException;
 
-/** JLine REPL：读取一行 → ReActAgent 处理（可能多轮工具调用）→ 打印最终回答 → 循环。 */
+/** JLine REPL：读取一行 → ReActAgent 处理（过程经 AgentDisplay 实时展示）→ 循环。 */
 public final class Repl {
 
     private final ReActAgent agent;
@@ -41,10 +41,7 @@ public final class Repl {
                     break;
                 }
                 try {
-                    var writer = terminal.writer();
-                    String answer = agent.run(input);
-                    writer.println("👽> " + answer);
-                    writer.flush();
+                    agent.run(input, new AgentDisplay(terminal));
                 } catch (RuntimeException e) {
                     System.err.println("error> " + e.getMessage());
                 }

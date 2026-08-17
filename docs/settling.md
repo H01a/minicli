@@ -246,6 +246,37 @@
 | README.md | 更新 | 环境要求说明 .env 为真实配置 | 已完成（人工确认后执行） |
 | docs/04-progress.md | 更新 | 记录任务 11 与测试证据；修正 max-steps 默认值 | 已完成（人工确认后执行） |
 
+### 2026-08-17 · M2 切片 5：REPL 过程展示 + 补齐 16 个内置工具 + 文档补全
+
+| 文件 | 动作 | 生成规则摘要 | 状态 |
+| --- | --- | --- | --- |
+| docs/settling.md | 更新 | 登记本轮清单 | 已完成（人工确认后执行） |
+| docs/04-progress.md | 更新 | 更新时间/当前阶段/历史记录补全 | 已完成（人工确认后执行） |
+| docs/02-design.md | 更新 | §4.2 过程展示设计；§4.3 16 工具清单 | 已完成（人工确认后执行） |
+| docs/03-implementation.md | 更新 | M2 切片 5 状态与剩余项 | 已完成（人工确认后执行） |
+| README.md | 更新 | 当前阶段同步 | 已完成（人工确认后执行） |
+| src/main/java/com/minicli/agent/core/AgentListener.java | 新建 | ReAct 过程事件接口 | 已完成（人工确认后执行；`mvn test` 73/73） |
+| src/main/java/com/minicli/agent/core/ReActAgent.java | 更新 | run(input, listener) + 事件转发 | 已完成（人工确认后执行；`mvn test` 73/73） |
+| src/main/java/com/minicli/ui/AgentDisplay.java | 新建 | 终端过程渲染 | 已完成（人工确认后执行） |
+| src/main/java/com/minicli/ui/Repl.java | 更新 | 接入 AgentDisplay | 已完成（人工确认后执行） |
+| src/main/java/com/minicli/tools/builtin/PathUtil.java | 新建 | ~ 展开/路径解析/敏感路径判定 | 已完成（人工确认后执行） |
+| src/main/java/com/minicli/tools/builtin/CommandRunner.java | 新建 | 命令执行辅助（超时/截断） | 已完成（人工确认后执行） |
+| src/main/java/com/minicli/tools/builtin/GetCwdTool.java 等 13 个工具 | 新建 | 补齐 16 工具（清单见 design §4.3） | 已完成（人工确认后执行；`mvn test` 73/73） |
+| src/main/java/com/minicli/Main.java | 更新 | 注册全部 16 个工具 | 已完成（人工确认后执行；`mvn test` 73/73） |
+| src/test/java/com/minicli/** | 新建/更新 | 各工具单测 + 事件链路测试 | 已完成（`mvn test` 73/73） |
+
+### 2026-08-17 · 输出优化：过程展示标题/耗时/结构化参数与结果
+
+| 文件 | 动作 | 生成规则摘要 | 状态 |
+| --- | --- | --- | --- |
+| docs/settling.md | 更新 | 登记本轮清单 | 已完成（人工确认后执行） |
+| src/main/java/com/minicli/agent/core/AgentListener.java | 更新 | onToolResult 增加 durationMillis | 已完成（人工确认后执行；`mvn test` 73/73） |
+| src/main/java/com/minicli/agent/core/ReActAgent.java | 更新 | 测量工具耗时；onToolCallStarted 提前到执行前 | 已完成（人工确认后执行；`mvn test` 73/73） |
+| src/main/java/com/minicli/ui/AgentDisplay.java | 更新 | 思考块/工具块标题+耗时+结构化参数与输出 | 已完成（人工确认后执行） |
+| src/test/java/com/minicli/agent/core/ReActAgentTest.java | 更新 | 事件监听签名与耗时断言 | 已完成（`mvn test` 73/73） |
+| docs/02-design.md | 更新 | §4.2 过程展示格式描述 | 已完成（人工确认后执行） |
+| docs/04-progress.md | 更新 | 记录任务 13 | 已完成（人工确认后执行） |
+
 ## 4. 常驻主动更新规则
 
 - 适用文件：`learning/concepts.md`（概念问答学习记录）。

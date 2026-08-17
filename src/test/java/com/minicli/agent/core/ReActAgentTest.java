@@ -2,6 +2,7 @@ package com.minicli.agent.core;
 
 import com.minicli.config.Config;
 import com.minicli.llm.DeepSeekClient;
+import com.minicli.llm.FunctionCall;
 import com.minicli.tools.spi.Tool;
 import com.minicli.tools.spi.ToolRegistry;
 import com.minicli.tools.spi.ToolResult;
@@ -186,6 +187,58 @@ class ReActAgentTest {
         String body = second.getBody().readUtf8();
         assertTrue(body.contains("echo:"), "观察结果应按配置长度截断");
         assertTrue(body.contains("已截断"));
+    }
+
+    @Test
+    void reportsProcessEventsToListener() throws Exception {
+        server.enqueue(ok(sseReasoningWithFunctionCall("call_1", "echo", new JSONObject().put("text", "hi"))));
+        server.enqueue(ok(sseText("好的，回显 hi")));
+
+        List<String> events = new ArrayList<>();
+        AgentListener listener = new AgentListener() {
+            @Override
+            public void onStep(int step, int maxSteps) {
+                events.add("step:" + step);
+            }
+
+            @Override
+            public void onReasoningDelta(String delta) {
+                events.add("reasoning:" + delta);
+            }
+
+            @Override
+            public void onToolCallStarted(FunctionCall call) {
+                events.add("tool_start:" + call.name());
+            }
+
+            @Override
+            public void onToolResult(FunctionCall call, ToolResult result, long durationMillis) {
+                events.add("tool_result:" + result.status());
+                assertTrue(durationMillis >= 0);
+            }
+
+            @Override
+            public void onOutputDelta(String delta) {
+                events.add("output:" + delta);
+            }
+
+            @Override
+            public void onDone() {
+                events.add("done");
+            }
+        };
+
+        String answer = agent.run("回显 hi", listener);
+
+        assertEquals("好的，回显 hi", answer);
+        assertEquals(List.of(
+                "step:1",
+                "reasoning:thinking...",
+                "tool_start:echo",
+                "tool_result:SUCCESS",
+                "step:2",
+                "output:好的，回显 hi",
+                "done"), events);
     }
 
     private static Tool barrierTool(String name, CountDownLatch arrived) {
