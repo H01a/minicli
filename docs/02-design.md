@@ -94,11 +94,28 @@ src/main/java/com/minicli/
 4. 循环直到模型输出最终回复或达到 max-steps。
 5. 每轮输出流式渲染；reasoning 单独通道回传 UI。
 
+具体形态（2026-08-14 切片 2+3 落地）：
+
+- `ReActAgent`（agent/core/）：维护 input items 列表（message + function_call + function_call_output），循环调用 `DeepSeekClient.askAgent`，直到 `functionCalls` 为空或达到 max-steps（默认 8）。
+- `DeepSeekClient.askAgent(inputItems, toolSpecs)`：请求体带 `input`（数组）、`tools`（注册表说明书）、`tool_choice:"auto"`；从 `response.completed` 的 response.output 提取 function_call 项（call_id/name/arguments）。
+- 工具结果回填前截断（默认 4000 字符）防上下文撑爆；未注册工具/参数解析失败也回填 FAILURE，不让异常中断循环。
+- 输出模型：`FunctionCall(callId, name, argumentsJson)`、`LlmTurnResult(outputText, reasoningText, functionCalls)`。
+- thinking 模式（2026-08-16 修复）：DeepSeek 要求继续循环时必须把上一轮的 reasoning 以 `{"type":"reasoning","content":[{"type":"reasoning_text","text":"..."}]}` 回传（官方 create-response 接口定义：reasoning item 的 content 为 reasoning_text 内容块列表），否则 HTTP 400。`ReActAgent` 在每轮继续前回填该 item。
+
 ### 4.3 工具抽象与并发
 
 - `Tool` 接口：`name()`, `description()`, `inputSchema()`, `invoke(ToolCall) -> ToolResult`。
 - `ToolRegistry`：内置工具启动注册，MCP 工具动态注册，统一索引。
 - 并发执行器：虚拟线程 + 信号量，最多 4 路；每路调用写入 `tool_calls` 审计表。
+
+落地状态（2026-08-16）：并发执行器已在 `ReActAgent` 内实现（`Executors.newVirtualThreadPerTaskExecutor` + `Semaphore(4)`，同一轮工具调用并行执行、结果按原始顺序回填）；审计暂缓（AuditStore 接口方案保留，SQLite 就绪后实现）。
+
+具体形态（2026-08-14 切片 1 落地）：
+
+- `Tool`（tools/spi/）：`name()` 唯一名、`description()` 用途说明、`inputSchema()` 入参 JSON Schema（org.json）、`invoke(JSONObject) -> ToolResult`。
+- `ToolResult`（tools/spi/）：`status(SUCCESS/FAILURE)`、`output`、`error`；实现必须把异常转成 FAILURE，不得抛给上层。
+- `ToolRegistry`（tools/spi/）：`register`（空名/重名拒绝）、`find`/`require`、`all`（注册顺序）、`size`。
+- 首批内置工具（tools/builtin/，只读先行）：`read_file`、`list_dir`、`glob`；后续按 M2 补齐 16 个工具清单。
 
 ### 4.4 Plan-and-Execute + Multi-Agent
 

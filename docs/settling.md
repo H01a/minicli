@@ -98,6 +98,38 @@
 | src/main/java/com/minicli/llm/DeepSeekClient.java | 更新 | response.completed 事件调用 handler.onDone()（此前空分支未触发换行回调） | 已完成（人工确认后执行） |
 | src/test/java/com/minicli/llm/DeepSeekClientTest.java | 更新 | 断言 completed 后回调 onDone，防回归 | 已完成（`mvn test` 10/10 通过，真实运行换行正常） |
 
+### 2026-08-14 · 概念问答追加：流式处理原理与打字机输出
+
+| 文件 | 动作 | 生成规则摘要 | 状态 |
+| --- | --- | --- | --- |
+| learning/concepts.md | 追加 | 流式 vs 非流式、JLine 打字机输出原理 | 已完成（第 4 节预先授权） |
+
+### 2026-08-14 · 概念问答追加：SSE delta/completed 事件理解确认
+
+| 文件 | 动作 | 生成规则摘要 | 状态 |
+| --- | --- | --- | --- |
+| learning/concepts.md | 追加 | SSE delta=过程、completed=结束的精确理解 | 已完成（第 4 节预先授权） |
+
+### 2026-08-14 · M1 完成状态文档同步
+
+| 文件 | 动作 | 生成规则摘要 | 状态 |
+| --- | --- | --- | --- |
+| README.md | 更新 | JLine 4 → 3.x；当前阶段更新；运行示例改 REPL | 已完成（人工确认后执行） |
+| docs/03-implementation.md | 更新 | M1 标注完成；reasoning 展示归 M2、多轮归 M5 | 已完成（人工确认后执行） |
+| docs/04-progress.md | 更新 | 当前阶段标注 M1 完成；任务 5 补验收证据 | 已完成（人工确认后执行） |
+
+### 2026-08-14 · 优化 AGENTS.md 为项目入职导航
+
+| 文件 | 动作 | 生成规则摘要 | 状态 |
+| --- | --- | --- | --- |
+| AGENTS.md | 更新 | 新增第 0 节"接手项目导航"：项目速览/文档地图/代码结构/工程进度/接手流程 | 已完成（人工确认后执行） |
+
+### 2026-08-14 · 注释保留 testStream 手动验证测试
+
+| 文件 | 动作 | 生成规则摘要 | 状态 |
+| --- | --- | --- | --- |
+| src/test/java/com/minicli/llm/DeepSeekClientTest.java | 更新 | testStream() 整体注释保留（用户手动真实验证用），不删除不执行 | 已完成（人工确认后执行） |
+
 ### 2026-08-14 · 概念问答追加：Responses API 参数速查
 
 | 文件 | 动作 | 生成规则摘要 | 状态 |
@@ -109,6 +141,92 @@
 | 文件 | 动作 | 生成规则摘要 | 状态 |
 | --- | --- | --- | --- |
 | learning/concepts.md | 追加 | SQLite/JLine/Ollama 概念确认 + Embedding 解释 | 已完成（第 4 节预先授权） |
+
+### 2026-08-14 · settings.xml 清理尝试 + SQLite 搁置决策
+
+| 文件 | 动作 | 生成规则摘要 | 状态 |
+| --- | --- | --- | --- |
+| docs/settling.md | 更新 | 登记本轮清单 | 已完成（人工确认后执行） |
+| ~/.m2/settings.xml | 备份后删除（mv 为 settings.xml.bak-word） | 外部环境文件；构建受影响则回滚 | 已完成（人工确认后执行；`mvn package` 成功、测试 10/10、告警消失） |
+| docs/04-progress.md | 更新 | 登记 settings.xml 处理结果与 SQLite 搁置决策 | 已完成（人工确认后执行） |
+
+### 2026-08-14 · 概念问答追加：工具形式与工具调用链路
+
+| 文件 | 动作 | 生成规则摘要 | 状态 |
+| --- | --- | --- | --- |
+| learning/concepts.md | 追加 | "工具的形式与实现：Tool 接口和 ToolRegistry"、"LLM 调用工具链路 vs 基础文本回答"概念问答 | 已完成（第 4 节预先授权） |
+
+### 2026-08-14 · M2 切片 1：统一工具抽象
+
+| 文件 | 动作 | 生成规则摘要 | 状态 |
+| --- | --- | --- | --- |
+| src/main/java/com/minicli/tools/spi/Tool.java | 新建 | 工具抽象接口 | 已完成（人工确认后执行；`mvn test` 20/20 通过） |
+| src/main/java/com/minicli/tools/spi/ToolResult.java | 新建 | 工具执行结果模型 | 已完成（人工确认后执行；`mvn test` 20/20 通过） |
+| src/main/java/com/minicli/tools/spi/ToolRegistry.java | 新建 | 统一注册表 | 已完成（人工确认后执行；`mvn test` 20/20 通过） |
+| src/main/java/com/minicli/tools/builtin/ReadFileTool.java | 新建 | 首批只读内置工具 | 已完成（人工确认后执行；`mvn test` 20/20 通过） |
+| src/main/java/com/minicli/tools/builtin/ListDirTool.java | 新建 | 首批只读内置工具 | 已完成（人工确认后执行；`mvn test` 20/20 通过） |
+| src/main/java/com/minicli/tools/builtin/GlobTool.java | 新建 | 首批只读内置工具 | 已完成（人工确认后执行；`mvn test` 20/20 通过） |
+| src/test/java/com/minicli/tools/spi/ToolRegistryTest.java | 新建 | JUnit 5；与主代码同包 | 已完成（`mvn test` 20/20 通过） |
+| src/test/java/com/minicli/tools/builtin/ReadFileToolTest.java | 新建 | JUnit 5；与主代码同包 | 已完成（`mvn test` 20/20 通过） |
+| src/test/java/com/minicli/tools/builtin/ListDirToolTest.java | 新建 | JUnit 5；与主代码同包 | 已完成（`mvn test` 20/20 通过） |
+| src/test/java/com/minicli/tools/builtin/GlobToolTest.java | 新建 | JUnit 5；与主代码同包 | 已完成（`mvn test` 20/20 通过） |
+| docs/02-design.md | 更新 | §4.3 补充接口签名与首批工具 | 已完成（人工确认后执行） |
+| docs/04-progress.md | 更新 | 记录切片 1 完成与下一任务 | 已完成（人工确认后执行） |
+
+### 2026-08-14 · 概念问答追加：tools 参数与调用时机
+
+| 文件 | 动作 | 生成规则摘要 | 状态 |
+| --- | --- | --- | --- |
+| learning/concepts.md | 追加 | "tools 参数的作用与示例"、"LLM 怎么知道该调用工具"概念问答 | 已完成（第 4 节预先授权） |
+
+### 2026-08-14 · 概念问答追加：ReAct 循环完整链路
+
+| 文件 | 动作 | 生成规则摘要 | 状态 |
+| --- | --- | --- | --- |
+| learning/concepts.md | 追加 | "ReAct 循环的一次完整链路（以天气为例）"概念问答 | 已完成（第 4 节预先授权） |
+
+### 2026-08-14 · M2 切片 2+3：Function Calling + ReAct 主循环
+
+| 文件 | 动作 | 生成规则摘要 | 状态 |
+| --- | --- | --- | --- |
+| src/main/java/com/minicli/llm/FunctionCall.java | 新建 | 函数调用模型 | 已完成（人工确认后执行；`mvn test` 26/26 通过） |
+| src/main/java/com/minicli/llm/LlmTurnResult.java | 新建 | 单轮响应模型 | 已完成（人工确认后执行；`mvn test` 26/26 通过） |
+| src/main/java/com/minicli/llm/DeepSeekClient.java | 更新 | askAgent + SSE 解析扩展（askStream 兼容） | 已完成（人工确认后执行；`mvn test` 26/26 通过） |
+| src/main/java/com/minicli/agent/core/ReActAgent.java | 新建 | ReAct 主循环（串行） | 已完成（人工确认后执行；`mvn test` 26/26 通过） |
+| src/main/java/com/minicli/agent/core/AgentException.java | 新建 | 循环异常 | 已完成（人工确认后执行；`mvn test` 26/26 通过） |
+| src/test/java/com/minicli/agent/core/ReActAgentTest.java | 新建 | JUnit 5 + MockWebServer | 已完成（`mvn test` 26/26 通过） |
+| src/test/java/com/minicli/llm/DeepSeekClientTest.java | 更新 | 新增 askAgent 测试 | 已完成（`mvn test` 26/26 通过） |
+| docs/02-design.md | 更新 | §4.2 补充具体形态 | 已完成（人工确认后执行） |
+| docs/04-progress.md | 更新 | 记录完成与下一任务 | 已完成（人工确认后执行） |
+
+### 2026-08-16 · M2 切片 4（部分）：agent 模式主程序 + 并发执行（审计暂缓）
+
+| 文件 | 动作 | 生成规则摘要 | 状态 |
+| --- | --- | --- | --- |
+| src/main/java/com/minicli/Main.java | 更新 | 装配 ToolRegistry/内置工具/ReActAgent | 已完成（人工确认后执行；`mvn test` 28/28、`mvn package` 成功） |
+| src/main/java/com/minicli/ui/Repl.java | 更新 | 改用 ReActAgent（agent 模式，保留 👽 风格） | 已完成（人工确认后执行；`mvn test` 28/28） |
+| src/main/java/com/minicli/agent/core/ReActAgent.java | 更新 | 并发执行（虚拟线程 + Semaphore(4)，按序回填） | 已完成（人工确认后执行；`mvn test` 28/28） |
+| src/main/java/com/minicli/agent/core/AgentException.java | 更新 | 增加带 cause 构造器 | 已完成（人工确认后执行；`mvn test` 28/28） |
+| src/test/java/com/minicli/agent/core/ReActAgentTest.java | 更新 | 新增并发测试（并行执行/上限 4 路） | 已完成（`mvn test` 28/28） |
+| docs/02-design.md | 更新 | §4.3 补充并发落地状态 | 已完成（人工确认后执行） |
+| docs/04-progress.md | 更新 | 记录完成；审计暂缓 | 已完成（人工确认后执行） |
+
+### 2026-08-16 · 修复：thinking 模式 reasoning 未回传导致 HTTP 400
+
+| 文件 | 动作 | 生成规则摘要 | 状态 |
+| --- | --- | --- | --- |
+| src/main/java/com/minicli/agent/core/ReActAgent.java | 更新 | 继续循环前回填 reasoning item（content 为 reasoning_text 内容块列表） | 已完成（人工确认后执行；依据官方 create-response 接口定义，`mvn test` 29/29） |
+| src/test/java/com/minicli/agent/core/ReActAgentTest.java | 更新 | 新增 thinking 模式 reasoning 回传回归测试 | 已完成（`mvn test` 29/29） |
+| docs/02-design.md | 更新 | §4.2 补充 reasoning 回传要求 | 已完成（人工确认后执行） |
+| docs/04-progress.md | 更新 | 记录修复与官方接口核实结论 | 已完成（人工确认后执行） |
+
+### 2026-08-17 · Review 修复 + 调试打点
+
+| 文件 | 动作 | 生成规则摘要 | 状态 |
+| --- | --- | --- | --- |
+| src/main/java/com/minicli/agent/core/ReActAgent.java | 更新 | 移除整历史打印；新增 [agent]/[tool] 打点；reasoningItem 确认为官方格式 | 已完成（人工确认后执行；`mvn test` 29/29） |
+| src/main/java/com/minicli/llm/DeepSeekClient.java | 更新 | 请求失败打印收敛为 [llm] 摘要打点（不打印完整请求体） | 已完成（人工确认后执行；`mvn test` 29/29） |
+| docs/04-progress.md | 更新 | 记录 review 修复与打点 | 已完成（人工确认后执行） |
 
 ## 4. 常驻主动更新规则
 

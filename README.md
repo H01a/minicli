@@ -5,9 +5,9 @@
 
 类似 Claude Code 的终端 Agent CLI：在终端里用自然语言驱动代码开发与调试。
 基于 ReAct 主循环、Plan-and-Execute + Multi-Agent、MCP 工具集成、三层记忆系统、
-RAG 代码库检索，技术栈为 Java 21 / JLine 4 / SQLite / JGit / CDP / Jieba / OkHttp / DeepSeek（OpenAI 兼容）。
+RAG 代码库检索，技术栈为 Java 21 / JLine 3.x / SQLite / JGit / CDP / Jieba / OkHttp / DeepSeek（OpenAI 兼容）。
 
-> 当前阶段：M0.1 环境与工程骨架（helloworld 可运行），详见 [docs/04-progress.md](docs/04-progress.md)。
+> 当前阶段：M1 已完成（DeepSeek 流式问答闭环）；M0.2 进行中（config + REPL 完成，SQLite 待办），详见 [docs/04-progress.md](docs/04-progress.md)。
 
 ## 环境要求
 
@@ -32,7 +32,7 @@ mvn test
 # 4) 打包为可执行 jar
 mvn package
 
-# 5) 运行（期望输出 Hello from minicli (Java 21.x)）
+# 5) 运行（进入 REPL：输入问题获得流式回答，exit 退出）
 java -jar target/minicli-0.1.0-SNAPSHOT.jar
 ```
 

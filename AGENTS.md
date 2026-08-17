@@ -1,4 +1,42 @@
+# minicli —— AI 编码 Agent 行为契约
+
+> 所有 agent 接手本项目时，从阅读本文件开始；本文件是项目地图，规则细则见 docs/rules 与 docs/。
+
 本文件只规定 AI 编码 Agent 在项目仓库中的行为。产品需求、技术方案、数据库表和实施细节由项目文档维护，本文件不重复抄写。
+
+**0. 接手项目导航（必读）**
+
+- 项目是什么：minicli 是终端 Agent CLI 练手项目——在终端用自然语言驱动代码开发与调试；技术栈 Java 21 / Maven / JLine 3.x / SQLite / OkHttp / DeepSeek API。产品目标与验收见 docs/01-prd.md。
+
+- 文档地图（权威文档结构与读取时机）：
+
+  | 文件 | 作用 | 读取时机 |
+  | --- | --- | --- |
+  | docs/rules/01-compulsory.md | 最高优先级强制规则（先 plan 后修改、settling 登记、每轮检查符合性） | 每一轮 |
+  | docs/settling.md | 每轮修改文件清单注册表 | 涉及文件修改时最先登记 |
+  | docs/01-prd.md | 做什么：功能与验收标准 | 任务涉及功能/验收时 |
+  | docs/02-design.md | 怎么设计：架构、包结构、表、API | 实现细节时 |
+  | docs/03-implementation.md | 怎么推进：里程碑与切片 | 任务开始时 |
+  | docs/04-progress.md | 做到哪里：当前阶段、下一任务、阻塞 | 每次任务第一步 |
+  | docs/05-vibecoding-workflow.md | 工作流沉淀与复盘 | 复盘/沉淀时 |
+  | learning/ | 用户学习记录（仅用户与 root 对话使用） | 其他 agent 默认忽略 |
+
+- 代码结构导航（完整包职责见 docs/02-design.md §3）：
+
+  ```
+  src/main/java/com/minicli/
+  ├── Main.java      入口：装配 Config / DeepSeekClient / REPL
+  ├── config/        统一配置加载（唯一读 .env 的地方）
+  ├── llm/           DeepSeek Responses API 客户端（流式）
+  ├── ui/            JLine REPL
+  ├── db/            SQLite 连接与迁移（M0.2 待实现）
+  └── domain/ agent/ tools/ mcp/ memory/ retrieval/ git/ browser/   按里程碑逐步落地
+  依赖方向：ui → agent → llm/tools/mcp/memory/retrieval → domain；配置统一加载。
+  ```
+
+- 工程进度：以 docs/04-progress.md 为唯一权威来源（当前快照：M1 已完成；M0.2 进行中，SQLite 迁移待办——可能过时，动手前务必重读）。
+
+- 接手第一步：读本文件 → 读 docs/rules/01-compulsory.md → 读 docs/04-progress.md → 按任务范围读 PRD/设计/实施 → 查现有代码与测试 → 按最小纵向切片动手 → 完成后更新进度与 settling。
 
 **1. 基本行为**
 

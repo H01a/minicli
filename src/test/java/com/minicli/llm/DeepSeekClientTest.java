@@ -4,6 +4,7 @@ import com.minicli.config.Config;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
+import org.json.JSONObject;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -12,6 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -113,6 +115,40 @@ class DeepSeekClientTest {
         assertThrows(LlmException.class, () -> client.ask("Hi"));
     }
 
+    @Test
+    void askAgentSendsToolsAndInputArray() throws Exception {
+        server.enqueue(new MockResponse()
+                .setHeader("Content-Type", "text/event-stream")
+                .setBody(sseDelta("Hello!")));
+
+        LlmTurnResult result = client.askAgent(
+                List.of(new JSONObject().put("type", "message").put("role", "user").put("content", "Hi")),
+                List.of(new JSONObject().put("type", "function").put("name", "echo")));
+
+        assertTrue(result.finished());
+        assertEquals("Hello!", result.outputText());
+        RecordedRequest request = server.takeRequest();
+        String body = request.getBody().readUtf8();
+        assertTrue(body.contains("\"tools\""));
+        assertTrue(body.contains("\"tool_choice\":\"auto\""));
+        assertTrue(body.contains("\"type\":\"message\""));
+    }
+
+    @Test
+    void askAgentParsesFunctionCallFromCompleted() throws Exception {
+        server.enqueue(new MockResponse()
+                .setHeader("Content-Type", "text/event-stream")
+                .setBody(sseFunctionCall("call_9", "echo", new JSONObject().put("text", "hi"))));
+
+        LlmTurnResult result = client.askAgent(List.of(), List.of());
+
+        assertFalse(result.finished());
+        assertEquals(1, result.functionCalls().size());
+        assertEquals("call_9", result.functionCalls().get(0).callId());
+        assertEquals("echo", result.functionCalls().get(0).name());
+        assertEquals("{\"text\":\"hi\"}", result.functionCalls().get(0).argumentsJson());
+    }
+
     private static String sseDelta(String text) {
         return """
                 event: response.output_text.delta
@@ -140,4 +176,38 @@ class DeepSeekClientTest {
                 .append(",\"response\":{\"id\":\"resp_1\",\"object\":\"response\",\"status\":\"completed\",\"model\":\"deepseek-v4-flash\",\"output\":[],\"usage\":{}}}\n\n");
         return sb.toString();
     }
+
+    private static String sseFunctionCall(String callId, String name, JSONObject arguments) {
+        String args = arguments.toString();
+        String quoted = JSONObject.quote(args);
+        return """
+                event: response.output_item.done
+                data: {"type":"response.output_item.done","sequence_number":1,"item":{"type":"function_call","id":"fc_1","call_id":"%s","name":"%s","arguments":%s}}
+
+                event: response.completed
+                data: {"type":"response.completed","sequence_number":2,"response":{"id":"resp_1","object":"response","status":"completed","model":"deepseek-v4-flash","output":[{"type":"function_call","id":"fc_1","call_id":"%s","name":"%s","arguments":%s}],"usage":{}}}
+
+                """.formatted(callId, name, quoted, callId, name, quoted);
+    }
+
+    /*
+     * 用户手动真实验证用（调用真实 DeepSeek API，依赖 .env 有效密钥）。
+     * 暂注释保留、不删除；需要时取消注释即可。
+     */
+    // @Test
+    // void testStream(){
+    //     Config config = Config.load();
+    //     DeepSeekClient client = new DeepSeekClient(config);
+    //     client.askStream("say: 'mamba out' 100times", new StreamHandler() {
+    //         @Override
+    //         public void onOutputDelta(String delta) {
+    //             System.out.println(delta);
+    //         }
+    //
+    //         @Override
+    //         public void onDone() {
+    //             System.out.println("说完了");
+    //         }
+    //     });
+    // }
 }

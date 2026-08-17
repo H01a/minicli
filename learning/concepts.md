@@ -150,3 +150,114 @@
 - DeepSeek 的流没有 OpenAI 传统的 data: [DONE] 消息，以 response.completed 结束。
 - 为什么用流式：回答边生成边显示，用户不用干等，体验接近真实聊天；REPL 里用回调把 delta 直接打到终端。
 - 实现：DeepSeekClient.askStream(input, handler) 解析 SSE，onOutputDelta 打印增量；ask() 拼接增量返回完整文本。
+
+### 2026-08-14 · 流式响应后端怎么处理？与非流式区别？JLine 如何打字机输出？
+
+**问题**：流式响应在后端是怎么处理的？和非流式有什么区别？JLine 怎么做到像打字机一样逐个输出？
+
+**解释**：
+- 非流式：客户端发一次请求，服务端等模型生成完整个回答后一次性返回完整 JSON；客户端拿到全部内容再解析显示。等待期间没有任何输出。
+- 流式（SSE）：请求里 stream:true，服务端开始生成后边生成边推送（HTTP 连接保持打开），每个小段是一个事件；客户端逐行读取、逐事件处理；模型生成完，服务端发 response.completed 结束事件后关闭连接。
+- 我们的后端处理（DeepSeekClient）：OkHttp 拿到响应后逐行读 byteStream；"event:" 行是事件类型，"data:" 行是 JSON；空行分隔事件；response.output_text.delta 事件一到就调 onOutputDelta 把增量交给 UI。
+- 本质区别：数据从"一个完整 JSON"变成"一串小事件"；用户从"干等"变成"边生成边看"。
+- 打字机效果：不是 JLine 特有，而是"增量打印 + 立即刷新"——每个 delta 到来自动调用 writer.print(delta)（不换行）+ writer.flush()（立即把缓冲推到终端，不等换行）。连续的小增量连续 flush，看起来就像打字机逐字打出。
+- 输出粒度取决于模型端的 delta 粒度（通常是词/片段），不是严格逐字符；严格逐字符需要在客户端拆字，我们没做也不需要。
+
+### 2026-08-14 · SSE 的 delta / completed 事件理解对吗
+
+**问题**：SSE 格式是不是就是 event 类型 + data 负载？event 类型是 delta 就代表还没说完，completed 代表说完了？
+
+**解释**：
+- 格式理解正确：SSE 每个事件是 event: 类型行 + data: JSON 负载行，空行分隔。
+- "delta = 过程、completed = 结束"方向对，但要精确：一个回答由很多个 delta 事件组成（每个 delta 是一小段），客户端只有收到 response.completed 才确定"说完了"——不能从"delta 数量"或"最后是不是 delta"来判断结束，结束标志是独立的 completed 事件。
+- 结束除了 completed（正常），还可能是 response.incomplete（截断，如超过 max_output_tokens）或 response.failed（失败）。
+- completed 事件的 data 里也带完整 response 对象（含 usage token 统计），不是空负载。
+- 还有其他事件类型（response.created、response.output_item.added 等），属于过程信号，客户端通常忽略。
+
+### 2026-08-14 · 工具的形式与实现：Tool 接口和 ToolRegistry
+
+**问题**：工具是以什么形式存在的，基础工具需要自己实现吗，怎么实现？
+
+**解释**：
+- 工具 = "函数 + 说明书"的 Java 对象：name（工具名）、description（用途说明）、inputSchema（入参 JSON Schema，告诉 LLM 要传什么参数）、invoke（真正干活的方法）。
+- 对 LLM 来说，工具只是请求里 tools 数组中的一段 JSON 描述；模型不执行任何代码，只"读说明书 + 发调用单"（function_call）。
+- 基础工具必须自己实现：LLM 厂商只提供"大脑"，读文件、搜代码、跑命令这些"手"要我们自己写；这正是本项目练手的目的。
+- 实现方式：实现 Tool 接口（返回名字/说明/参数 schema + 写 invoke 逻辑）→ 注册进 ToolRegistry → Agent 循环根据 LLM 返回的 function_call 按名字查表、调用、拿结果回填。将来 MCP 工具也注册进同一个注册表，循环代码不用改。
+- 关联里程碑：M2（工具层 + ReAct 主循环）。
+
+### 2026-08-14 · LLM 调用工具链路 vs 基础文本回答
+
+**问题**：LLM 调用工具的链路是什么样的，与基础文本回答有什么区别？
+
+**解释**：
+- 文本回答（M1 现状）：用户输入 → 一次请求 → LLM 直接生成文本 → 流式返回 → 结束。回答依据是模型训练数据，看不到当前项目实时状态。
+- 工具调用（M2）：一次用户输入对应 N 次请求的内部循环：LLM 返回 function_call（工具名 + 参数 JSON）→ 本地代码执行工具 → 把结果（observation）回填进消息列表 → 再发一轮 → 直到 LLM 输出里没有 function_call、只剩文本 → 结束。
+- LLM 并不真正"调用"你的代码：它只是生成一段有固定格式的 JSON 指令，真正的执行发生在你的进程里。这就是 Function Calling 名字的含义——模型输出结构化调用，而不是自然语言描述。
+- 核心区别：请求次数（1 vs N）、输出形式（纯文本 vs 结构化调用 + 文本）、上下文维护（无状态一问一答 vs 客户端维护完整消息列表）、答案依据（训练数据 vs 实时工具结果）。
+- 类比：文本回答像直接问老师；工具调用像老师派你先去查资料/做实验，拿到结果再回来汇报——老师不亲自跑腿，但根据你带回的真实数据下结论。
+- 关联里程碑：M2（ReAct 主循环：Reason → Act → Observe → 循环）。
+
+### 2026-08-14 · tools 参数的作用与示例
+
+**问题**：tool 参数有什么作用？能否给个示例？
+
+**解释**：
+- tools 参数是每次请求发给 LLM 的"工具说明书列表"，放在请求体里。每个工具一条：type（function）、name（工具名）、description（干什么用）、parameters（入参 JSON Schema）。
+- 作用：让模型知道"当前环境里有哪些能力可用、各叫什么、干什么、需要什么参数"。模型不执行任何工具，只读说明书并决定"该调谁、传什么参数"。
+- 工具的真正实现不在请求里：请求里只有说明书，真正的 Tool 对象在本地 ToolRegistry 里。模型返回的调用单会按 name 查表执行。
+- 示例（DeepSeek Responses API 请求体片段）：
+
+```json
+{
+  "model": "deepseek-v4-flash",
+  "input": "看看这个项目里有哪些 Java 文件",
+  "tools": [
+    {
+      "type": "function",
+      "name": "glob",
+      "description": "按 glob 模式查找文件并返回路径列表",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "pattern": {"type": "string", "description": "glob 模式，如 src/**/*.java"}
+        },
+        "required": ["pattern"]
+      }
+    }
+  ],
+  "tool_choice": "auto"
+}
+```
+
+- 注意：说明书越清晰，模型调用越准；传太多工具会消耗 token 且可能干扰决策，所以 description 要精炼。
+- 关联里程碑：M2 切片 2（LLM Function Calling）。
+
+### 2026-08-14 · LLM 怎么知道该调用工具
+
+**问题**：如何让 LLM 知道该调用工具了？
+
+**解释**：
+- 没有魔法，靠两层：① 通过 tools 参数把说明书给它（它"知道有哪些工具可用"）；② 模型被训练出 Function Calling 能力，读用户请求后自己判断"这问题需要实时数据/外部动作"，于是输出结构化的 function_call（工具名 + 参数 JSON），而不是自然语言描述。
+- 判断"该不该调"的是模型，不是我们的代码。代码只负责：把说明书发出去 → 解析输出（有 function_call 就执行并回填，没有就直接给文本答案）。
+- tool_choice 可以控制决策倾向：auto（默认，模型自己判断）、none（禁止调用）、required（至少调一个）、指定工具名（强制调那个）。
+- 模型输出的调用单示例：{"type":"function_call","call_id":"call_abc","name":"glob","arguments":"{\"pattern\":\"src/**/*.java\"}"}——arguments 是 JSON 字符串，本地要解析成对象再传给 Tool.invoke。
+- 类比：tools 参数 = 给员工发"公司能力手册"；该不该找某部门 = 员工读需求后自己判断；function_call = 员工填的"服务申请单"；本地代码 = 执行部门，看到申请单去干活，把结果填回来。
+- 为什么不由代码判断：用户需求是自然语言、千变万化，只有模型能理解"这句话背后需要调工具"，代码无法枚举所有情况——这就是"Function Calling 驱动，不是代码硬编码"。
+- 关联里程碑：M2 切片 2/3（Function Calling + ReAct 主循环）。
+
+### 2026-08-14 · ReAct 循环的一次完整链路（以天气为例）
+
+**问题**：ReAct 循环是不是"请求=input+工具说明书 → 响应=选工具+调用JSON → 请求=工具返回结果 → 响应=退出循环+回答"？
+
+**解释**：
+- 大方向对，但有三处细节要精确：
+  1. 请求字段是 tools（说明书列表），且每一轮都要带上——DeepSeek Responses API 是无状态的，说明书不会自动保留，模型下一轮可能还要调别的工具。
+  2. 第二轮的 input 不是"只有工具结果"，而是完整历史：用户消息 + assistant 的 function_call + function_call_output（工具结果）。function_call_output 必须跟在对应的 function_call 后面，模型才能理解"你调了 X，结果是 Y"。
+  3. 退出循环的判定：response.completed 且 output 里没有 function_call → 输出最终文本、退出；还有 function_call → 继续循环。另外设 max-steps 上限防死循环。
+- 天气例子（假设注册表里有个 weather 工具）：
+  - 第 1 轮请求：input=["看一下今天北京的天气"] + tools=[weather 说明书]
+  - 响应 1：function_call {name:"weather", arguments:{"city":"北京"}} → 本地执行 → 结果"北京 晴 32°C"
+  - 第 2 轮请求：input=[用户消息, function_call, function_call_output("北京 晴 32°C")] + tools（仍然带上）
+  - 响应 2：纯文本"今天北京晴，最高 32 度" → 退出循环，展示给用户
+- 模型本身不知道天气，最终答案来自工具返回的真实数据，模型只是把数据组织成自然语言。
+- 关联里程碑：M2 切片 3（ReAct 主循环）。

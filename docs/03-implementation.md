@@ -24,12 +24,13 @@
   - JLine 最小 REPL：输入命令 → 回显 → 退出。【已完成 2026-08-14，直接对接 LLM 问答而非回显】
   - 验收：`mvn test` 通过；`mvn package` 后可运行 REPL。
 
-### M1 LLM 接入（DeepSeek / OpenAI 兼容）
+### M1 LLM 接入（DeepSeek / OpenAI 兼容）（已完成 2026-08-14）
 
 - OkHttp 客户端：DeepSeek Responses API（OpenAI 兼容）、流式输出、reasoning 透传。
 - 垂直闭环：REPL 输入 → LLM 回答 → 流式渲染。
-- 进度：无状态流式一问一答已交付（2026-08-14：SSE 事件流，response.output_text.delta 增量打印，response.completed 结束）；多轮上下文待完善。
+- 进度：无状态流式一问一答已交付（SSE 增量打印，response.completed 结束）；reasoning 已通过回调透传，终端展示归 M2（FR-01 验收）；多轮上下文归 M5 记忆。
 - 验收：配置 .env（DEEPSEEK_API_KEY / DEEPSEEK_MODEL）后可对话；无网络/密钥缺失/服务不可用有清晰报错。
+  【验收通过 2026-08-14】
 
 ### M2 工具层 + ReAct 主循环
 
