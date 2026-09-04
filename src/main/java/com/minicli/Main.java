@@ -4,6 +4,12 @@ import com.minicli.agent.core.ReActAgent;
 import com.minicli.config.Config;
 import com.minicli.config.ConfigException;
 import com.minicli.llm.DeepSeekClient;
+import com.minicli.mcp.protocol.McpException;
+import com.minicli.mcp.registry.McpClient;
+import com.minicli.mcp.registry.McpServerConfig;
+import com.minicli.mcp.registry.McpServerLoader;
+import com.minicli.mcp.registry.McpTool;
+import com.minicli.mcp.registry.McpToolSpec;
 import com.minicli.tools.builtin.EditFileTool;
 import com.minicli.tools.builtin.GetCwdTool;
 import com.minicli.tools.builtin.GetEnvTool;
@@ -24,8 +30,14 @@ import com.minicli.tools.builtin.web.GLMWebSearchTool;
 import com.minicli.tools.spi.ToolRegistry;
 import com.minicli.ui.Repl;
 
+import java.io.IOException;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+
 /**
- * minicli 入口：装配 Config / ToolRegistry / DeepSeekClient / ReActAgent / JLine REPL 并启动。
+ * minicli 入口：装配 Config / ToolRegistry（内置 + MCP 动态）/ DeepSeekClient /
+ * ReActAgent / JLine REPL 并启动。
  */
 public final class Main {
 
@@ -59,9 +71,51 @@ public final class Main {
             } else {
                 System.err.println("[main] 未配置 GLM_API_KEY，跳过 glm_web_search 工具注册");
             }
+
+            // MCP stdio：按清单逐个连接 server，tools/list 动态注册（带 server 前缀）
+            List<McpClient> mcpClients = new ArrayList<>();
+            try {
+                List<McpServerConfig> servers =
+                        McpServerLoader.load(Path.of(config.mcpServersFile()));
+                for (McpServerConfig server : servers) {
+                    try {
+                        McpClient client = McpClient.connect(server);
+                        try {
+                            int registered = 0;
+                            for (McpToolSpec spec : client.tools()) {
+                                try {
+                                    registry.register(new McpTool(client, server.name(), spec));
+                                    registered++;
+                                } catch (IllegalArgumentException e) {
+                                    System.err.println("[main] 跳过 MCP 工具 " + server.name()
+                                            + "_" + spec.name() + ": " + e.getMessage());
+                                }
+                            }
+                            mcpClients.add(client);
+                            System.err.println("[main] MCP server '" + server.name()
+                                    + "' ready，注册 " + registered + " 个工具");
+                        } catch (RuntimeException e) {
+                            client.close();
+                            throw e;
+                        }
+                    } catch (RuntimeException e) {
+                        System.err.println("[main] MCP server '" + server.name()
+                                + "' 启动失败: " + e.getMessage());
+                    }
+                }
+            } catch (IOException | McpException e) {
+                System.err.println("[main] 读取 MCP 服务器配置失败: " + e.getMessage());
+            }
+
             ReActAgent agent = new ReActAgent(new DeepSeekClient(config), registry,
                     config.maxSteps(), config.maxConcurrency(), config.maxObservationChars());
-            new Repl(agent).start();
+            try {
+                new Repl(agent).start();
+            } finally {
+                for (McpClient client : mcpClients) {
+                    client.close();
+                }
+            }
         } catch (ConfigException e) {
             System.err.println("配置错误: " + e.getMessage());
             System.exit(1);

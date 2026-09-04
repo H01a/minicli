@@ -12,6 +12,7 @@ out/
 .env
 .env.*
 !.env.example
+config/mcp-servers.json
 
 # Data and logs
 *.db

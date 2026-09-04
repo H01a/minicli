@@ -41,6 +41,10 @@ public final class Config {
     /** 智谱 GLM 联网搜索（可选；未配置时不注册 glm_web_search 工具） */
     public static final String KEY_GLM_API_KEY = "GLM_API_KEY";
 
+    /** MCP stdio server 清单文件（相对项目根目录；文件不存在则跳过 MCP 注册） */
+    public static final String KEY_MCP_SERVERS_FILE = "MINICLI_MCP_SERVERS_FILE";
+    public static final String DEFAULT_MCP_SERVERS_FILE = "config/mcp-servers.json";
+
     private final String apiKey;
     private final String model;
     private final String baseUrl;
@@ -50,10 +54,12 @@ public final class Config {
     private final int maxConcurrency;
     private final int maxObservationChars;
     private final String glmApiKey;
+    private final String mcpServersFile;
 
     private Config(String apiKey, String model, String baseUrl,
                    int connectTimeoutSeconds, int readTimeoutSeconds,
-                   int maxSteps, int maxConcurrency, int maxObservationChars, String glmApiKey) {
+                   int maxSteps, int maxConcurrency, int maxObservationChars,
+                   String glmApiKey, String mcpServersFile) {
         this.apiKey = apiKey;
         this.model = model;
         this.baseUrl = baseUrl;
@@ -63,6 +69,7 @@ public final class Config {
         this.maxConcurrency = maxConcurrency;
         this.maxObservationChars = maxObservationChars;
         this.glmApiKey = glmApiKey;
+        this.mcpServersFile = mcpServersFile;
     }
 
     /** 从项目根目录 .env 加载；也支持同名系统环境变量兜底。 */
@@ -93,14 +100,16 @@ public final class Config {
                 positiveInt(values, KEY_MAX_STEPS, DEFAULT_MAX_STEPS, "ReAct 最大步数"),
                 positiveInt(values, KEY_MAX_CONCURRENCY, DEFAULT_MAX_CONCURRENCY, "工具最大并发数"),
                 positiveInt(values, KEY_MAX_OBSERVATION_CHARS, DEFAULT_MAX_OBSERVATION_CHARS, "观察结果截断字符数"),
-                glmApiKey(values));
+                glmApiKey(values),
+                mcpServersFile(values));
     }
 
     /** 测试/扩展用：显式指定三项配置（baseUrl 便于指向 MockWebServer），其余使用默认值。 */
     public static Config of(String apiKey, String model, String baseUrl) {
         return new Config(apiKey, model, baseUrl,
                 DEFAULT_CONNECT_TIMEOUT_SECONDS, DEFAULT_READ_TIMEOUT_SECONDS,
-                DEFAULT_MAX_STEPS, DEFAULT_MAX_CONCURRENCY, DEFAULT_MAX_OBSERVATION_CHARS, "");
+                DEFAULT_MAX_STEPS, DEFAULT_MAX_CONCURRENCY, DEFAULT_MAX_OBSERVATION_CHARS,
+                "", DEFAULT_MCP_SERVERS_FILE);
     }
 
     /** 测试/扩展用：完整指定全部配置。 */
@@ -109,7 +118,8 @@ public final class Config {
                             int maxSteps, int maxConcurrency, int maxObservationChars) {
         return new Config(apiKey, model, baseUrl,
                 connectTimeoutSeconds, readTimeoutSeconds,
-                maxSteps, maxConcurrency, maxObservationChars, "");
+                maxSteps, maxConcurrency, maxObservationChars,
+                "", DEFAULT_MCP_SERVERS_FILE);
     }
 
     /** 解析 .env：忽略空行与 # 注释，支持 KEY=VALUE 与引号包裹的值。 */
@@ -144,6 +154,12 @@ public final class Config {
     private static String glmApiKey(Map<String, String> values) {
         String raw = firstNonBlank(values.get(KEY_GLM_API_KEY), System.getenv(KEY_GLM_API_KEY));
         return raw == null ? "" : raw.trim();
+    }
+
+    /** 读取 MCP server 清单文件路径：缺失时使用默认路径。 */
+    private static String mcpServersFile(Map<String, String> values) {
+        return firstNonBlank(values.get(KEY_MCP_SERVERS_FILE),
+                System.getenv(KEY_MCP_SERVERS_FILE), DEFAULT_MCP_SERVERS_FILE).trim();
     }
 
     /** 读取正整数配置：.env / 环境变量缺失或为空时用默认值；非法值（非数字、非正数）报错。 */
@@ -205,5 +221,9 @@ public final class Config {
 
     public String glmApiKey() {
         return glmApiKey;
+    }
+
+    public String mcpServersFile() {
+        return mcpServersFile;
     }
 }

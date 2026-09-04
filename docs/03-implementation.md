@@ -41,11 +41,14 @@
 - 切片 5（已完成 2026-08-17）：REPL 过程展示（AgentListener + AgentDisplay，见 design §4.2）；16 个内置工具补齐（清单见 design §4.3；路径统一支持 `~` 展开；写类工具拒绝 .env* 与 .git；`mvn test` 73/73）。
 - 验收：自然语言任务可触发多工具调用并最终回答；审计可查。【审计可查部分暂缓，SQLite 就绪后实现】
 
-### M3 MCP stdio 集成
+### M3 MCP stdio 集成（已完成 2026-09-04）
 
-- JSON-RPC 协议层 + 生命周期状态机 + stdio 传输。
-- tools/list 动态注册、tools/call 调用。
-- 验收：连接一个 stdio MCP server（可自写最小 echo server）完成一次工具调用。
+- JSON-RPC 2.0 协议层 + 生命周期状态机 + stdio 传输（newline-delimited JSON）。
+- 会话层 `McpClient`：initialize → initialized → tools/list（翻页）→ tools/call，id 配对 + 默认 30s 超时。
+- 动态注册：`McpTool` 实现统一 `Tool` 接口，暴露名 `{server}_{tool}` 注册进 `ToolRegistry`；Main 读取 `MINICLI_MCP_SERVERS_FILE` 清单逐 server 装配。
+- 测试：Java 测试专用 StubMcpProcess（真实子进程）+ everything 官方 server 集成冒烟（默认跳过，`MINICLI_MCP_EVERYTHING_IT=true` 时执行）。
+- 验收证据：`mvn test` 100/100（1 个默认跳过）；everything 上完成 initialize/list/echo 真实调用；`mvn package` 成功。
+- 遗留：tools/list_changed 动态刷新、自动重连与超时外部化归 M4/M9；审计在 SQLite 就绪后补。
 
 ### M4 MCP Streamable HTTP 集成
 

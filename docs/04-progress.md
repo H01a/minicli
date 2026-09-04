@@ -4,7 +4,7 @@
 
 ## 当前阶段
 
-**M1 已完成；M2 除审计外已完成（切片 1-5：统一工具抽象、Function Calling + ReAct 主循环、并发执行、agent 模式主程序、配置外部化、REPL 过程展示、16 个内置工具）；审计按用户 2026-08-16 决定暂缓（AuditStore 接口方案保留，SQLite 就绪后实现）；M0.2 SQLite 迁移执行器按用户 2026-08-14 决定暂时搁置。**
+**M1 已完成；M2 除审计外已完成（切片 1-5：统一工具抽象、Function Calling + ReAct 主循环、并发执行、agent 模式主程序、配置外部化、REPL 过程展示、16 个内置工具）；M3 MCP stdio 集成已完成（2026-09-04，everything 联调）；审计按用户 2026-08-16 决定暂缓（AuditStore 接口方案保留，SQLite 就绪后实现）；M0.2 SQLite 迁移执行器按用户 2026-08-14 决定暂时搁置。**
 
 ## 已完成
 
@@ -71,6 +71,13 @@
   - 密钥管理：Config 新增可选 `GLM_API_KEY`（.env 第 5 节），统一加载注入工具；Main 仅在配置了 key 时注册该工具；移除 pom 中未使用的 zai-sdk。
   - 文档：design §4.3 可选工具说明、§4.8 配置行；settling 登记。
   - 证据：`mvn test` 83/83 通过（新增 Config 1 个 + GLMWebSearchTool 9 个用例）；`mvn package` 成功；真实搜索冒烟需用户填入 key 后验证。
+- 2026-09-04 任务 17（M3 MCP stdio 集成，everything 联调）：
+  - 分层实现：`mcp/protocol`（JsonRpc、McpException）、`mcp/transport`（Transport、StdioTransport）、`mcp/registry`（McpServerConfig、McpToolSpec、McpServerLoader、McpClient、McpTool）。
+  - stdio 按官方 2025-06-18 规范用 newline-delimited JSON；生命周期 initialize → notifications/initialized → tools/list（跟随 nextCursor 翻页）→ tools/call；数字 id 配对 + 默认 30s 超时；M3 不做自动重连。
+  - 工具动态注册：对外暴露名 `{server}_{tool}`（如 everything_echo），McpTool 实现统一 Tool 接口并映射回 `tools/call`；Main 按 `MINICLI_MCP_SERVERS_FILE`（默认 config/mcp-servers.json）装配，单 server 失败不影响启动。
+  - 配置：.env/.env.example 新增第 4 节；提交 config/mcp-servers.example.json；本地 config/mcp-servers.json 已 gitignore。
+  - 测试：StubMcpProcess（测试专用真实子进程）+ StdioTransport/McpClient/McpTool/McpServerLoader/Config 用例；everything 集成测试默认跳过、`MINICLI_MCP_EVERYTHING_IT=true` 时执行。
+  - 证据：`mvn test` 100/100（1 个默认跳过）；everything 真实冒烟通过（initialize/list/echo → `Echo: hello from minicli`）；`mvn package` 成功。
 
 ## 进行中
 
@@ -78,7 +85,7 @@
 
 ## 下一任务
 
-**M3 MCP stdio 集成：JSON-RPC 协议层 + 生命周期状态机 + stdio 传输；tools/list 动态注册、tools/call 调用；验收：连接一个 stdio MCP server（可自写最小 echo server）完成一次工具调用。**
+**M4 MCP Streamable HTTP 集成：把 Transport 换成 HTTP/SSE 传输并补断流重连；联调对象优先用户自建 FastMCP SSE server（10.71.11.49:8000，需先解决本机网络连通）。**
 （审计与 M0.2 SQLite 迁移执行器保持按用户决定暂缓：审计在 SQLite 就绪后实现；真实 API 的 REPL 过程展示冒烟待用户验证。）
 
 ## 阻塞与注意事项
@@ -107,3 +114,4 @@
 | 2026-08-17 | 任务 12 M2 切片 5 过程展示 + 16 工具 | AgentListener/AgentDisplay + 13 个新工具（`mvn test` 73/73，`mvn package` 成功） | 审计暂缓；真实 API 过程展示待验证 |
 | 2026-08-17 | 任务 13 输出优化 | 过程展示标题含耗时、结构化参数/结果（`mvn test` 73/73） | 真实终端渲染待验证 |
 | 2026-09-04 | 任务 16 联网搜索工具 | GLM WebSearch 完整实现 + Config 密钥管理（`mvn test` 83/83） | 真实搜索需用户填 key 冒烟 |
+| 2026-09-04 | 任务 17（M3 MCP stdio） | 协议/传输/会话/适配 + everything 联调（`mvn test` 100/100，everything 冒烟通过） | list_changed 动态刷新、自动重连与超时外部化归 M4/M9 |

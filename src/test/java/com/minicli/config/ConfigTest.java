@@ -67,6 +67,7 @@ class ConfigTest {
         assertEquals(Config.DEFAULT_MAX_CONCURRENCY, config.maxConcurrency());
         assertEquals(Config.DEFAULT_MAX_OBSERVATION_CHARS, config.maxObservationChars());
         assertEquals("", config.glmApiKey());
+        assertEquals(Config.DEFAULT_MCP_SERVERS_FILE, config.mcpServersFile());
     }
 
     @Test
@@ -81,6 +82,7 @@ class ConfigTest {
                 MINICLI_AGENT_MAX_STEPS=3
                 MINICLI_AGENT_MAX_CONCURRENCY=2
                 MINICLI_AGENT_MAX_OBSERVATION_CHARS=100
+                MINICLI_MCP_SERVERS_FILE=config/custom-mcp-servers.json
                 """);
 
         Config config = Config.load(env);
@@ -91,6 +93,7 @@ class ConfigTest {
         assertEquals(3, config.maxSteps());
         assertEquals(2, config.maxConcurrency());
         assertEquals(100, config.maxObservationChars());
+        assertEquals("config/custom-mcp-servers.json", config.mcpServersFile());
     }
 
     @Test

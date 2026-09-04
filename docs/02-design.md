@@ -84,7 +84,7 @@ src/main/java/com/minicli/
 - `Plan` / `PlanNode`（dependsOn, status, attempts）/ `ReviewVerdict`
 - `MemoryEntry`（type, projectScope, keywords, content, dedupHash, sourceRefs）
 - `RetrievalHit`（path, lineRange, score, snippet）
-- `McpServerConfig`、`McpToolSpec`
+- `McpServerConfig`、`McpToolSpec`：实现落地为 `mcp/registry` 内的 record（inputSchema 携带 org.json JSONObject，避免 JSON 库进入纯 domain 包）
 
 ### 4.2 ReAct 主循环
 
@@ -148,12 +148,14 @@ src/main/java/com/minicli/
 - Worker 池：每个节点一个 worker，执行结果写回节点。
 - Reviewer：对结果独立审核（规则 + LLM 校验），不通过按配置重试；达到上限标记失败。
 
-### 4.5 MCP 客户端
+### 4.5 MCP 客户端（M3 已完成 2026-09-04）
 
-- 生命周期状态机：`NEW → INITIALIZING → READY → CLOSED`，失败可重连。
-- 协议层：JSON-RPC 2.0，消息 id 关联请求/响应，支持 notifications。
-- 传输层抽象 `Transport`：`stdio`（进程 stdin/stdout）与 `Streamable HTTP`（SSE 流）。
-- 动态注册：`tools/list` 返回的 tool 转成 `ToolSpec` 注册进 `ToolRegistry`；调用时映射回 `tools/call`。
+- stdio 传输 = newline-delimited JSON（每行一条 JSON-RPC，UTF-8；官方 2025-06-18 规范），stderr 只转发为日志。
+- 协议流程：`initialize` → `notifications/initialized` → `tools/list`（跟随 nextCursor 翻页）→ `tools/call`；请求靠数字 id 与响应配对，通知只打日志。
+- 生命周期状态机：`NEW → INITIALIZING → READY → CLOSED`；M3 不做自动重连，进程退出/超时转 `McpException`/`ToolResult.FAILURE`。
+- 包落点：`protocol/`（JsonRpc、McpException）、`transport/`（Transport、StdioTransport）、`registry/`（McpServerConfig、McpToolSpec、McpServerLoader、McpClient、McpTool）。
+- 配置：server 清单文件由 `MINICLI_MCP_SERVERS_FILE` 指定（默认 `config/mcp-servers.json`，格式见 §4.8 与 config/mcp-servers.example.json）；Main 逐个连接并把工具注册进统一 ToolRegistry。
+- 动态注册：MCP 工具对外暴露名加 server 前缀（如 `everything_echo`），`McpTool` 实现 `Tool` 接口，调用时映射回 server 侧原名执行 `tools/call`；默认请求超时 30s。
 
 ### 4.6 记忆系统
 
@@ -183,6 +185,7 @@ src/main/java/com/minicli/
 | Agent | MINICLI_AGENT_MAX_STEPS | 50 | ReAct 最大循环步数 |
 | Agent | MINICLI_AGENT_MAX_CONCURRENCY | 4 | 同一轮工具调用最大并发数 |
 | Agent | MINICLI_AGENT_MAX_OBSERVATION_CHARS | 4000 | 工具观察结果回填前的截断字符数 |
+| MCP | MINICLI_MCP_SERVERS_FILE | config/mcp-servers.json | MCP stdio server 清单文件（相对项目根目录；不存在则跳过 MCP 注册） |
 | 外部 API | GLM_API_KEY | 无（可选） | 智谱开放平台密钥；配置后启用 glm_web_search |
 
 ## 5. 数据库表（SQLite）
@@ -204,6 +207,6 @@ src/main/java/com/minicli/
 ## 6. 错误处理与可观测性
 
 - LLM：连接失败/超时/空响应/密钥缺失均转化为可读错误；Function Calling 输出非法时重试一次并降级提示。
-- MCP：进程退出、SSE 断流、超时触发重连；审计记录失败原因。
+- MCP（M3 现状）：进程退出/请求超时转为 ToolResult.FAILURE，不自动重连；M4 Streamable HTTP 再补断流重连与审计。
 - 工具：异常捕获为 `ToolResult.failure`，不让异常打断 ReAct 循环。
 - 日志：分层 logger，审计落 SQLite；终端只展示用户可读信息。

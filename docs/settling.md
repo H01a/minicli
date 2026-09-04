@@ -307,6 +307,66 @@
 | docs/02-design.md | 更新 | §4.3 可选工具 + §4.8 配置行 | 已完成（人工确认后执行） |
 | docs/04-progress.md | 更新 | 记录任务 16 | 已完成（人工确认后执行） |
 
+### 2026-09-04 · 概念问答追加：MCP 协议行为与实现核心
+
+| 文件 | 动作 | 生成规则摘要 | 状态 |
+| --- | --- | --- | --- |
+| docs/settling.md | 更新 | 登记本轮清单 | 已完成 |
+| learning/concepts.md | 追加 | 概念问答：MCP 协议行为大白话 + 实现核心 | 已完成（第 4 节预先授权） |
+
+### 2026-09-04 · 概念问答追加：用户对 MCP 理解的三点确认
+
+| 文件 | 动作 | 生成规则摘要 | 状态 |
+| --- | --- | --- | --- |
+| docs/settling.md | 更新 | 登记本轮清单 | 已完成 |
+| learning/concepts.md | 追加 | 概念问答：入口/流程/工具格式理解确认 | 已完成（第 4 节预先授权） |
+
+### 2026-09-04 · 概念问答追加：MCP 子进程角色澄清
+
+| 文件 | 动作 | 生成规则摘要 | 状态 |
+| --- | --- | --- | --- |
+| docs/settling.md | 更新 | 登记本轮清单 | 已完成 |
+| learning/concepts.md | 追加 | 概念问答：子进程是 MCP server，协议 I/O 在主进程内 | 已完成（第 4 节预先授权） |
+
+### 2026-09-04 · 概念问答追加：stdio 是什么
+
+| 文件 | 动作 | 生成规则摘要 | 状态 |
+| --- | --- | --- | --- |
+| docs/settling.md | 更新 | 登记本轮清单 | 已完成 |
+| learning/concepts.md | 追加 | 概念问答：标准输入/输出与 MCP stdio | 已完成（第 4 节预先授权） |
+
+### 2026-09-04 · M3 MCP stdio 集成（everything 联调）
+
+| 文件 | 动作 | 生成规则摘要 | 状态 |
+| --- | --- | --- | --- |
+| docs/settling.md | 更新 | 登记本轮清单 | 已完成（人工确认后执行） |
+| src/main/java/com/minicli/mcp/protocol/McpException.java | 新建 | MCP 运行期异常 | 已完成（人工确认后执行；`mvn test` 100/100，everything 冒烟通过） |
+| src/main/java/com/minicli/mcp/protocol/JsonRpc.java | 新建 | JSON-RPC 2.0 编解码工具 | 已完成（人工确认后执行；`mvn test` 100/100，everything 冒烟通过） |
+| src/main/java/com/minicli/mcp/transport/Transport.java | 新建 | 传输层抽象（M4 复用） | 已完成（人工确认后执行；`mvn test` 100/100，everything 冒烟通过） |
+| src/main/java/com/minicli/mcp/transport/StdioTransport.java | 新建 | stdio 子进程收发 newline-delimited JSON | 已完成（人工确认后执行；`mvn test` 100/100，everything 冒烟通过） |
+| src/main/java/com/minicli/mcp/registry/McpServerConfig.java | 新建 | server 配置模型（name/command/args） | 已完成（人工确认后执行；`mvn test` 100/100，everything 冒烟通过） |
+| src/main/java/com/minicli/mcp/registry/McpToolSpec.java | 新建 | tools/list 工具模型 | 已完成（人工确认后执行；`mvn test` 100/100，everything 冒烟通过） |
+| src/main/java/com/minicli/mcp/registry/McpServerLoader.java | 新建 | JSON 清单加载与校验 | 已完成（人工确认后执行；`mvn test` 100/100，everything 冒烟通过） |
+| src/main/java/com/minicli/mcp/registry/McpClient.java | 新建 | 生命周期/请求配对/工具发现与调用 | 已完成（人工确认后执行；`mvn test` 100/100，everything 冒烟通过） |
+| src/main/java/com/minicli/mcp/registry/McpTool.java | 新建 | MCP 工具适配统一 Tool（server 前缀） | 已完成（人工确认后执行；`mvn test` 100/100，everything 冒烟通过） |
+| src/main/java/com/minicli/config/Config.java | 更新 | 新增 MINICLI_MCP_SERVERS_FILE | 已完成（人工确认后执行；`mvn test` 100/100，everything 冒烟通过） |
+| src/main/java/com/minicli/Main.java | 更新 | 启动时加载 MCP 清单并注册工具 | 已完成（人工确认后执行；`mvn test` 100/100，everything 冒烟通过） |
+| .env.example / .env | 更新 | 新增第 4 节 MCP 配置说明 | 已完成（人工确认后执行；`mvn test` 100/100，everything 冒烟通过） |
+| .gitignore | 更新 | 忽略 config/mcp-servers.json 本地清单 | 已完成（人工确认后执行；`mvn test` 100/100，everything 冒烟通过） |
+| config/mcp-servers.example.json | 新建 | everything server 配置样例 | 已完成（人工确认后执行；`mvn test` 100/100，everything 冒烟通过） |
+| config/mcp-servers.json | 新建（本地） | everything 本地联调清单（不入库） | 已完成（人工确认后执行；`mvn test` 100/100，everything 冒烟通过） |
+| src/test/java/com/minicli/mcp/testing/StubMcpProcess.java | 新建 | 测试专用 MCP stdio server | 已完成（人工确认后执行；`mvn test` 100/100，everything 冒烟通过） |
+| src/test/java/com/minicli/mcp/transport/StdioTransportTest.java | 新建 | 传输层测试 | 已完成（人工确认后执行；`mvn test` 100/100，everything 冒烟通过） |
+| src/test/java/com/minicli/mcp/registry/McpClientTest.java | 新建 | 会话生命周期/工具调用测试 | 已完成（人工确认后执行；`mvn test` 100/100，everything 冒烟通过） |
+| src/test/java/com/minicli/mcp/registry/McpToolTest.java | 新建 | 适配器/注册表测试 | 已完成（人工确认后执行；`mvn test` 100/100，everything 冒烟通过） |
+| src/test/java/com/minicli/mcp/registry/McpServerLoaderTest.java | 新建 | 配置加载测试 | 已完成（人工确认后执行；`mvn test` 100/100，everything 冒烟通过） |
+| src/test/java/com/minicli/mcp/registry/McpEverythingIntegrationTest.java | 新建 | everything 冒烟（环境变量开关） | 已完成（人工确认后执行；`mvn test` 100/100，everything 冒烟通过） |
+| src/test/java/com/minicli/config/ConfigTest.java | 更新 | MCP 配置默认值/自定义值用例 | 已完成（人工确认后执行；`mvn test` 100/100，everything 冒烟通过） |
+| docs/02-design.md | 更新 | §4.1 模型落点；§4.5 MCP 客户端实现；§4.8 配置行 | 已完成（人工确认后执行；`mvn test` 100/100，everything 冒烟通过） |
+| docs/03-implementation.md | 更新 | M3 状态 | 已完成（人工确认后执行；`mvn test` 100/100，everything 冒烟通过） |
+| docs/04-progress.md | 更新 | 记录 M3 与证据 | 已完成（人工确认后执行；`mvn test` 100/100，everything 冒烟通过） |
+| README.md | 更新 | MCP 配置说明 | 已完成（人工确认后执行；`mvn test` 100/100，everything 冒烟通过） |
+
 ## 4. 常驻主动更新规则
 
 - 适用文件：`learning/concepts.md`（概念问答学习记录）。

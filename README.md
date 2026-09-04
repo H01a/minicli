@@ -7,12 +7,13 @@
 基于 ReAct 主循环、Plan-and-Execute + Multi-Agent、MCP 工具集成、三层记忆系统、
 RAG 代码库检索，技术栈为 Java 21 / JLine 3.x / SQLite / JGit / CDP / Jieba / OkHttp / DeepSeek（OpenAI 兼容）。
 
-> 当前阶段：M1 已完成；M2 除审计外已完成（工具层、Function Calling + ReAct、并发执行、配置外部化、REPL 过程展示、16 个内置工具）；审计与 SQLite 暂缓；下一里程碑 M3 MCP stdio，详见 [docs/04-progress.md](docs/04-progress.md)。
+> 当前阶段：M1 已完成；M2 除审计外已完成；M3 MCP stdio 已完成（协议/传输/动态注册，everything 联调通过）；审计与 SQLite 暂缓；下一里程碑 M4 MCP Streamable HTTP，详见 [docs/04-progress.md](docs/04-progress.md)。
 
 ## 环境要求
 
 - JDK 21（已通过 Homebrew 安装并注册，`/usr/libexec/java_home -v 21` 可找到）
 - Maven 3.9+（本机 3.9.10）
+- 可选：Node.js 22 + npx（跑 everything MCP 示例 server）
 - 后续里程碑还需要：DeepSeek API Key（或任意 OpenAI 兼容端点），配置在项目根目录 .env（键名 DEEPSEEK_API_KEY / DEEPSEEK_MODEL；完整键位与中文注释见 .env.example。.env.example 仅为个人使用模板，真正生效的是 .env）
 
 ## 快速开始（Maven 构建 / 测试 / 运行）
@@ -39,6 +40,19 @@ java -jar target/minicli-0.1.0-SNAPSHOT.jar
 注意：`mvn package` 生成的 jar 由 Java 21 编译（class file 65），必须用 JDK 21 运行；
 如果 `java -jar` 报 `UnsupportedClassVersionError`，说明 PATH 里的 java 还是旧版本，
 先执行上面的 export 再运行。
+
+## 可选：MCP stdio 服务器
+
+把 MCP server 清单写到 `config/mcp-servers.json`（模板见 [config/mcp-servers.example.json](config/mcp-servers.example.json)，该本地文件已被 .gitignore 排除）。默认加载路径由 `.env` 的 `MINICLI_MCP_SERVERS_FILE` 指定，缺省为 `config/mcp-servers.json`；清单文件不存在时 minicli 不启用 MCP。
+
+连接官方 everything 测试 server：
+
+```bash
+cp config/mcp-servers.example.json config/mcp-servers.json
+java -jar target/minicli-0.1.0-SNAPSHOT.jar
+```
+
+启动后 MCP 工具会以 `everything_xxx` 前缀注册进工具表，可直接让 Agent 调用（如 `everything_echo`）。
 
 ## Git 常用指令
 
