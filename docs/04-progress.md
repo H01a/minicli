@@ -1,6 +1,6 @@
 # minicli 进度（现在做到哪里）
 
-- 更新时间：2026-08-17
+- 更新时间：2026-09-04
 
 ## 当前阶段
 
@@ -66,6 +66,11 @@
   - AgentListener.onToolResult 增加 durationMillis；ReActAgent 在 runWithPermit 测量工具实际耗时，并把 onToolCallStarted 提前到执行前触发。
   - AgentDisplay 重写：思考块标题（🧠 thinking · thought xx ms）+ reasoning 原文；工具块标题（🔧 invoke xxx · running xx ms）+ 结构化 args/output（JSON 自动格式化）；最终回答保持流式。
   - 证据：`mvn test` 73/73 通过；`mvn package` 成功；真实终端渲染待用户冒烟。
+- 2026-09-04 任务 16（联网搜索工具 glm_web_search）：
+  - 接手用户草稿并完整实现智谱 GLM 网络搜索（OkHttp 直连 `POST /api/paas/v4/web_search`，Bearer 鉴权，search_query/count/search_engine/search_recency_filter 参数校验，响应 search_result 结构化为标题/链接/来源/摘要）。
+  - 密钥管理：Config 新增可选 `GLM_API_KEY`（.env 第 5 节），统一加载注入工具；Main 仅在配置了 key 时注册该工具；移除 pom 中未使用的 zai-sdk。
+  - 文档：design §4.3 可选工具说明、§4.8 配置行；settling 登记。
+  - 证据：`mvn test` 83/83 通过（新增 Config 1 个 + GLMWebSearchTool 9 个用例）；`mvn package` 成功；真实搜索冒烟需用户填入 key 后验证。
 
 ## 进行中
 
@@ -101,3 +106,4 @@
 | 2026-08-17 | 任务 11 配置外部化重构 | .env 分类 + Config 统一加载 + 链路重构（`mvn test` 34/34） | 无 |
 | 2026-08-17 | 任务 12 M2 切片 5 过程展示 + 16 工具 | AgentListener/AgentDisplay + 13 个新工具（`mvn test` 73/73，`mvn package` 成功） | 审计暂缓；真实 API 过程展示待验证 |
 | 2026-08-17 | 任务 13 输出优化 | 过程展示标题含耗时、结构化参数/结果（`mvn test` 73/73） | 真实终端渲染待验证 |
+| 2026-09-04 | 任务 16 联网搜索工具 | GLM WebSearch 完整实现 + Config 密钥管理（`mvn test` 83/83） | 真实搜索需用户填 key 冒烟 |

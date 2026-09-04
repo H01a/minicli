@@ -20,6 +20,7 @@ import com.minicli.tools.builtin.SystemInfoTool;
 import com.minicli.tools.builtin.TreeTool;
 import com.minicli.tools.builtin.WhichTool;
 import com.minicli.tools.builtin.WriteFileTool;
+import com.minicli.tools.builtin.web.GLMWebSearchTool;
 import com.minicli.tools.spi.ToolRegistry;
 import com.minicli.ui.Repl;
 
@@ -53,6 +54,11 @@ public final class Main {
             registry.register(new GitStatusTool());
             registry.register(new GitDiffTool());
             registry.register(new WhichTool());
+            if (!config.glmApiKey().isBlank()) {
+                registry.register(new GLMWebSearchTool(config.glmApiKey()));
+            } else {
+                System.err.println("[main] 未配置 GLM_API_KEY，跳过 glm_web_search 工具注册");
+            }
             ReActAgent agent = new ReActAgent(new DeepSeekClient(config), registry,
                     config.maxSteps(), config.maxConcurrency(), config.maxObservationChars());
             new Repl(agent).start();

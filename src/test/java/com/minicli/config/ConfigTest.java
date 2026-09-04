@@ -66,6 +66,7 @@ class ConfigTest {
         assertEquals(Config.DEFAULT_MAX_STEPS, config.maxSteps());
         assertEquals(Config.DEFAULT_MAX_CONCURRENCY, config.maxConcurrency());
         assertEquals(Config.DEFAULT_MAX_OBSERVATION_CHARS, config.maxObservationChars());
+        assertEquals("", config.glmApiKey());
     }
 
     @Test
@@ -104,5 +105,19 @@ class ConfigTest {
         ConfigException ex = assertThrows(ConfigException.class, () -> Config.load(env));
 
         assertTrue(ex.getMessage().contains("MINICLI_AGENT_MAX_STEPS"));
+    }
+
+    @Test
+    void loadReadsCustomGlmApiKey() throws IOException {
+        Path env = tempDir.resolve(".env");
+        Files.writeString(env, """
+                DEEPSEEK_API_KEY=sk-test-123
+                DEEPSEEK_MODEL=deepseek-v4-flash
+                GLM_API_KEY=test-glm-key
+                """);
+
+        Config config = Config.load(env);
+
+        assertEquals("test-glm-key", config.glmApiKey());
     }
 }

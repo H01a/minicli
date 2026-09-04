@@ -139,6 +139,8 @@ src/main/java/com/minicli/
 
 落地状态（2026-08-17）：16 个工具全部补齐并注册进 `Main`；`PathUtil` 与 `CommandRunner` 为公共辅助。
 
+可选扩展（2026-09-04）：`glm_web_search` —— 智谱 GLM 联网搜索工具，需在 .env 配置 `GLM_API_KEY`（见 §4.8）；未配置时不注册，已注册时密钥由 Config 统一加载注入。
+
 ### 4.4 Plan-and-Execute + Multi-Agent
 
 - Planner：把任务拆成 `PlanNode` 图，节点带 `dependsOn`。
@@ -181,6 +183,7 @@ src/main/java/com/minicli/
 | Agent | MINICLI_AGENT_MAX_STEPS | 50 | ReAct 最大循环步数 |
 | Agent | MINICLI_AGENT_MAX_CONCURRENCY | 4 | 同一轮工具调用最大并发数 |
 | Agent | MINICLI_AGENT_MAX_OBSERVATION_CHARS | 4000 | 工具观察结果回填前的截断字符数 |
+| 外部 API | GLM_API_KEY | 无（可选） | 智谱开放平台密钥；配置后启用 glm_web_search |
 
 ## 5. 数据库表（SQLite）
 

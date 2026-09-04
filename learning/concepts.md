@@ -261,3 +261,34 @@
   - 响应 2：纯文本"今天北京晴，最高 32 度" → 退出循环，展示给用户
 - 模型本身不知道天气，最终答案来自工具返回的真实数据，模型只是把数据组织成自然语言。
 - 关联里程碑：M2 切片 3（ReAct 主循环）。
+
+### 2026-09-04 · MCP 协议与 M3 stdio 集成
+
+**问题**：M3（MCP stdio 集成）是什么、有什么用、怎么实现？
+
+**解释**：
+- MCP（Model Context Protocol）= 一套标准协议，统一"AI 应用 ↔ 外部工具/数据源"的交互方式。MCP server 负责暴露工具清单和调用接口，宿主（minicli）动态发现并调用，不用为每个新工具改宿主代码。
+- 为什么有用：内置工具要我们逐个手写并随版本发布；MCP 生态里有现成的文件、数据库、GitHub 等 server，接一次就能复用。这也是 PRD 里"内置 16 个 + MCP 外部 60+"的机制来源。
+- 三层结构：
+  1. 协议层：JSON-RPC 2.0 消息（请求/响应/通知，靠 id 配对）。生命周期固定为 initialize 握手 → initialized 通知 → tools/list 枚举 → tools/call 调用；状态机 NEW → INITIALIZING → READY → CLOSED，失败可重连。
+  2. 传输层：stdio = 启动 server 子进程，stdin/stdout 传消息（每行一条 JSON，newline-delimited JSON），stderr 留给进程日志；Streamable HTTP 是 M4 的事。
+  3. 注册层：tools/list 返回的每个工具（name/description/inputSchema）翻译成宿主自己的工具接口，注册进 ToolRegistry。
+- 和 M2 的关系：MCP 工具 = 多了一层"远程翻译"。LLM 仍走 Function Calling，只看 ToolRegistry 里的说明书；真正干活时，适配器把调用转成 tools/call 请求发给 server，等响应取回结果。isError、超时、进程退出都转成 ToolResult.failure，不打断 ReAct 循环。
+- 类比：MCP 像 USB 接口，server 像各种外设；tools/list 是插上后的设备枚举，tools/call 是调用设备功能，宿主里的适配器相当于设备驱动。
+- 实现落点（仓库已预留包骨架）：mcp/protocol（JSON-RPC 编解码 + 状态机）、mcp/transport（Transport 抽象 + StdioTransport：ProcessBuilder 起进程、读 stdout 行、写 stdin）、mcp/registry（McpClient 会话 + 工具适配器动态注册）；Main 装配时按 server 配置启动并注册，agent/tools 层不用改。
+- 验收闭环（M3 最小切片）：自写一个 echo server → minicli 完成 initialize/list/call → echo 工具注册进 ToolRegistry → ReActAgent 完成一次真实工具调用。
+- 关联里程碑：M3（MCP stdio 集成）、M4（Streamable HTTP）。
+
+### 2026-09-04 · MCP 与联网搜索的关系
+
+**问题**：实现 MCP 前是否要先实现联网搜索？
+
+**解释**：
+- 不需要，两者是两条独立的能力线。MCP 是"宿主 ↔ 外部工具"的连接协议（怎么接）；联网搜索是一种具体工具能力（接什么/干什么），二者没有前置依赖。
+- MCP 本身也不要求联网：M3 的 stdio 是本地进程管道，验收对象是自写的 echo server，全程不碰网络；M4 的 Streamable HTTP 只是把传输换成网络协议，仍不依赖搜索。
+- 想要联网搜索时有两条路线，都不以对方为前置：
+  1. 内置工具路线：直接加一个 web_search/fetch 内置工具（与 MCP 无关），改 Main 注册即可；
+  2. MCP server 路线：先完成 M3 把协议打通，再连接现成的搜索类 MCP server，走动态注册。
+- 本项目当前规划里没有独立的"联网搜索"里程碑（M7 是代码库检索 RAG，M8 的 CDP 是浏览器调试，都不是通用联网搜索）；所以按现有路线应直接推进 M3，搜索是以后按需加的可选扩展。
+- 类比：USB 协议（MCP）和"接一个 U 盘还是接一个摄像头"（工具能力）是两回事；先把 USB 口做出来，再接什么设备都可以。
+- 关联里程碑：M3（MCP stdio 集成）、M4（Streamable HTTP）。

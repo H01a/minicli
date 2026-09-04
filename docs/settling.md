@@ -277,6 +277,36 @@
 | docs/02-design.md | 更新 | §4.2 过程展示格式描述 | 已完成（人工确认后执行） |
 | docs/04-progress.md | 更新 | 记录任务 13 | 已完成（人工确认后执行） |
 
+### 2026-09-04 · 概念问答追加：MCP 与 M3 stdio 集成原理
+
+| 文件 | 动作 | 生成规则摘要 | 状态 |
+| --- | --- | --- | --- |
+| docs/settling.md | 更新 | 登记本轮清单 | 已完成 |
+| learning/concepts.md | 追加 | 概念问答：MCP 是什么、有什么用、M3 怎么实现 | 已完成（第 4 节预先授权） |
+
+### 2026-09-04 · 概念问答追加：MCP 与联网搜索的关系
+
+| 文件 | 动作 | 生成规则摘要 | 状态 |
+| --- | --- | --- | --- |
+| docs/settling.md | 更新 | 登记本轮清单 | 已完成 |
+| learning/concepts.md | 追加 | 概念问答：实现 MCP 是否要先实现联网搜索 | 已完成（第 4 节预先授权） |
+
+### 2026-09-04 · 联网搜索工具 glm_web_search（OkHttp 直连 + Config 密钥管理）
+
+| 文件 | 动作 | 生成规则摘要 | 状态 |
+| --- | --- | --- | --- |
+| docs/settling.md | 更新 | 登记本轮清单 | 已完成（人工确认后执行） |
+| src/main/java/com/minicli/tools/builtin/web/GLMWebSearchTool.java | 重写 | 完整实现智谱网络搜索 API 调用 | 已完成（人工确认后执行；`mvn test` 83/83） |
+| src/main/java/com/minicli/tools/builtin/web/package-info.java | 新建 | web 子包说明 | 已完成（人工确认后执行） |
+| src/main/java/com/minicli/config/Config.java | 更新 | 新增可选 GLM_API_KEY | 已完成（人工确认后执行；`mvn test` 83/83） |
+| src/main/java/com/minicli/Main.java | 更新 | 有 key 时注册 glm_web_search | 已完成（人工确认后执行；`mvn test` 83/83） |
+| pom.xml | 更新 | 移除未使用的 zai-sdk | 已完成（人工确认后执行） |
+| .env.example / .env | 更新 | 追加第 5 节 GLM_API_KEY（保留原值） | 已完成（人工确认后执行；原密钥未改动） |
+| src/test/java/com/minicli/config/ConfigTest.java | 更新 | 默认空 + 自定义读取 | 已完成（`mvn test` 83/83） |
+| src/test/java/com/minicli/tools/builtin/web/GLMWebSearchToolTest.java | 新建 | MockWebServer 测试 | 已完成（`mvn test` 83/83） |
+| docs/02-design.md | 更新 | §4.3 可选工具 + §4.8 配置行 | 已完成（人工确认后执行） |
+| docs/04-progress.md | 更新 | 记录任务 16 | 已完成（人工确认后执行） |
+
 ## 4. 常驻主动更新规则
 
 - 适用文件：`learning/concepts.md`（概念问答学习记录）。
